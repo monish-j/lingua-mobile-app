@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Pressable,
   Keyboard,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
@@ -17,6 +18,8 @@ interface VerificationModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onVerify: (code: string) => Promise<void>;
+  onResend?: () => Promise<void>;
   email: string;
 }
 
@@ -24,6 +27,8 @@ export default function VerificationModal({
   visible,
   onClose,
   onSuccess,
+  onVerify,
+  onResend,
   email,
 }: VerificationModalProps) {
   const [code, setCode] = useState("");
@@ -39,17 +44,6 @@ export default function VerificationModal({
       clearTimeout(successTimeoutRef.current);
       successTimeoutRef.current = null;
     }
-  };
-
-  // Mock authentication-service verification helper
-  // Checks code correctness for pending account (mocked test code: "123456")
-  const verifyCodeService = async (enteredCode: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      // Simulate API call to auth service
-      setTimeout(() => {
-        resolve(enteredCode === "123456");
-      }, 600);
-    });
   };
 
   useEffect(() => {
@@ -85,6 +79,18 @@ export default function VerificationModal({
     onClose();
   };
 
+  const handleResend = async () => {
+    if (onResend) {
+      try {
+        setError(null);
+        await onResend();
+        Alert.alert("Code Sent", "A new verification code has been sent to your email.");
+      } catch (err: any) {
+        setError(err.message || "Failed to resend verification code.");
+      }
+    }
+  };
+
   const handleChangeText = (text: string) => {
     if (isVerifying) return; // Prevent input changes during active verification
 
@@ -99,40 +105,36 @@ export default function VerificationModal({
 
       const sessionStarted = sessionRef.current;
 
-      // Trigger authentication-service verification
-      verifyCodeService(cleanText)
-        .then((isValid) => {
+      // Trigger dynamic verification callback
+      onVerify(cleanText)
+        .then(() => {
           // Verify result still belongs to current visible session
           if (sessionStarted !== sessionRef.current || !visible) {
             return; // Discard stale/dismissed session result
           }
 
-          if (isValid) {
-            clearSuccessTimeout();
-            successTimeoutRef.current = setTimeout(() => {
-              // Confirm session is still valid before invoking success callback
-              if (sessionStarted === sessionRef.current && visible) {
-                onSuccess();
-              }
-              setIsVerifying(false);
-            }, 250);
-          } else {
+          clearSuccessTimeout();
+          successTimeoutRef.current = setTimeout(() => {
+            // Confirm session is still valid before invoking success callback
+            if (sessionStarted === sessionRef.current && visible) {
+              onSuccess();
+            }
             setIsVerifying(false);
-            setError("Invalid verification code. Please try again.");
-            setCode(""); // Clear boxes for retry
-            // Refocus hidden text input for retry
-            setTimeout(() => {
-              if (sessionStarted === sessionRef.current && visible) {
-                inputRef.current?.focus();
-              }
-            }, 100);
-          }
+          }, 250);
         })
-        .catch(() => {
-          if (sessionStarted === sessionRef.current && visible) {
-            setIsVerifying(false);
-            setError("Verification error. Please try again.");
+        .catch((err) => {
+          if (sessionStarted !== sessionRef.current || !visible) {
+            return;
           }
+          setIsVerifying(false);
+          setError(err.message || "Invalid verification code. Please try again.");
+          setCode(""); // Clear boxes for retry
+          // Refocus hidden text input for retry
+          setTimeout(() => {
+            if (sessionStarted === sessionRef.current && visible) {
+              inputRef.current?.focus();
+            }
+          }, 100);
         });
     }
   };
@@ -236,7 +238,10 @@ export default function VerificationModal({
               ) : (
                 <Text className="text-caption text-neutral-text-secondary text-center mt-6">
                   {"Didn't receive the code? "}
-                  <Text className="font-poppins-semibold text-primary-purple">
+                  <Text 
+                    onPress={handleResend}
+                    className="font-poppins-semibold text-primary-purple"
+                  >
                     Resend
                   </Text>
                 </Text>

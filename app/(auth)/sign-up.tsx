@@ -12,13 +12,17 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
 import { Feather, FontAwesome } from "@expo/vector-icons";
+import { useSignUp, useAuth, useSSO } from "@clerk/expo";
 import { images } from "../../constants/images";
 import VerificationModal from "../../components/VerificationModal";
 
 export default function SignUp() {
   const router = useRouter();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { signUp } = useSignUp();
+  const { startSSOFlow } = useSSO();
   
   // Input fields state
   const [email, setEmail] = useState("");
@@ -35,7 +39,19 @@ export default function SignUp() {
   // Verification Modal visibility
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleSignUp = () => {
+  if (!authLoaded || !signUp) {
+    return null;
+  }
+
+  if (isSignedIn) {
+    return <Redirect href="/" />;
+  }
+
+  const navigateAfterAuth = () => {
+    router.replace("/");
+  };
+
+  const handleSignUp = async () => {
     if (!email) {
       Alert.alert("Error", "Please enter your email address.");
       return;
@@ -44,14 +60,79 @@ export default function SignUp() {
       Alert.alert("Error", "Please enter a password.");
       return;
     }
-    // Show OTP verification modal
-    setModalVisible(true);
+
+    try {
+      // Start the signup attempt using password method
+      const { error } = await signUp.password({
+        emailAddress: email,
+        password: password,
+      });
+
+      if (error) {
+        Alert.alert("Sign Up Error", error.message || "Failed to register.");
+        return;
+      }
+
+      // Send the verification code
+      const { error: sendError } = await signUp.verifications.sendEmailCode();
+      if (sendError) {
+        Alert.alert("Verification Error", sendError.message || "Failed to send code.");
+        return;
+      }
+
+      setModalVisible(true);
+    } catch (err: any) {
+      Alert.alert("Sign Up Error", err.message || "Failed to register.");
+    }
+  };
+
+  const handleVerifyCode = async (code: string) => {
+    const { error } = await signUp.verifications.verifyEmailCode({
+      code,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Invalid verification code.");
+    }
+
+    if (signUp.status === "complete") {
+      const { error: finalizeError } = await signUp.finalize({ navigate: navigateAfterAuth });
+      if (finalizeError) {
+        throw new Error(finalizeError.message || "Failed to finalize session.");
+      }
+    } else {
+      throw new Error("Sign up incomplete. Status: " + signUp.status);
+    }
+  };
+
+  const handleResendCode = async () => {
+    const { error } = await signUp.verifications.sendEmailCode();
+    if (error) {
+      throw new Error(error.message || "Failed to resend code.");
+    }
   };
 
   const handleVerificationSuccess = () => {
     setModalVisible(false);
     // Automatically navigate to the home route
     router.replace("/");
+  };
+
+  const handleSocialAuth = async (strategy: 'oauth_google' | 'oauth_facebook' | 'oauth_apple') => {
+    try {
+      const { createdSessionId, setActive: setSSOActive } = await startSSOFlow({
+        strategy,
+      });
+      if (createdSessionId && setSSOActive) {
+        await setSSOActive({ session: createdSessionId });
+        router.replace("/");
+      }
+    } catch (err: any) {
+      // Do not show error on user cancellation
+      if (err.errors?.[0]?.code !== "auth_session_cancelled") {
+        Alert.alert("Social Auth Error", err.errors?.[0]?.message || err.message || "Failed to authenticate.");
+      }
+    }
   };
 
   return (
@@ -183,7 +264,7 @@ export default function SignUp() {
               activeOpacity={0.9}
               onPressIn={() => setPressedBtn("google")}
               onPressOut={() => setPressedBtn(null)}
-              onPress={() => setModalVisible(true)}
+              onPress={() => handleSocialAuth("oauth_google")}
               style={[
                 styles.socialButton,
                 pressedBtn === "google" && styles.socialButtonPressed
@@ -202,7 +283,7 @@ export default function SignUp() {
               activeOpacity={0.9}
               onPressIn={() => setPressedBtn("facebook")}
               onPressOut={() => setPressedBtn(null)}
-              onPress={() => setModalVisible(true)}
+              onPress={() => handleSocialAuth("oauth_facebook")}
               style={[
                 styles.socialButton,
                 pressedBtn === "facebook" && styles.socialButtonPressed
@@ -221,7 +302,7 @@ export default function SignUp() {
               activeOpacity={0.9}
               onPressIn={() => setPressedBtn("apple")}
               onPressOut={() => setPressedBtn(null)}
-              onPress={() => setModalVisible(true)}
+              onPress={() => handleSocialAuth("oauth_apple")}
               style={[
                 styles.socialButton,
                 pressedBtn === "apple" && styles.socialButtonPressed
@@ -248,6 +329,9 @@ export default function SignUp() {
               </Text>
             </Text>
           </View>
+
+          {/* Required for sign-up flows on Expo web. Clerk skips the browser CAPTCHA on iOS and Android */}
+          <View nativeID="clerk-captcha" />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -256,6 +340,8 @@ export default function SignUp() {
         visible={modalVisible}
         email={email}
         onClose={() => setModalVisible(false)}
+        onVerify={handleVerifyCode}
+        onResend={handleResendCode}
         onSuccess={handleVerificationSuccess}
       />
     </SafeAreaView>

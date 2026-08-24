@@ -12,13 +12,17 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
 import { Feather, FontAwesome } from "@expo/vector-icons";
+import { useSignIn, useAuth, useSSO } from "@clerk/expo";
 import { images } from "../../constants/images";
 import VerificationModal from "../../components/VerificationModal";
 
 export default function SignIn() {
   const router = useRouter();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { signIn } = useSignIn();
+  const { startSSOFlow } = useSSO();
   
   // Input field state
   const [email, setEmail] = useState("");
@@ -32,19 +36,88 @@ export default function SignIn() {
   // Verification Modal visibility
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleSignIn = () => {
+  if (!authLoaded || !signIn) {
+    return null;
+  }
+
+  if (isSignedIn) {
+    return <Redirect href="/" />;
+  }
+
+  const navigateAfterAuth = () => {
+    router.replace("/");
+  };
+
+  const handleSignIn = async () => {
     if (!email) {
       Alert.alert("Error", "Please enter your email address.");
       return;
     }
-    // Show OTP verification modal
-    setModalVisible(true);
+
+    try {
+      // Start the sign in and send the email code
+      const { error } = await signIn.emailCode.sendCode({
+        emailAddress: email,
+      });
+
+      if (error) {
+        Alert.alert("Sign In Error", error.message || "Failed to send code.");
+        return;
+      }
+
+      setModalVisible(true);
+    } catch (err: any) {
+      Alert.alert("Sign In Error", err.message || "Failed to sign in.");
+    }
+  };
+
+  const handleVerifyCode = async (code: string) => {
+    const { error } = await signIn.emailCode.verifyCode({
+      code,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Invalid verification code.");
+    }
+
+    if (signIn.status === "complete") {
+      const { error: finalizeError } = await signIn.finalize({ navigate: navigateAfterAuth });
+      if (finalizeError) {
+        throw new Error(finalizeError.message || "Failed to finalize session.");
+      }
+    } else {
+      throw new Error("Sign in incomplete. Status: " + signIn.status);
+    }
+  };
+
+  const handleResendCode = async () => {
+    const { error } = await signIn.emailCode.sendCode();
+    if (error) {
+      throw new Error(error.message || "Failed to resend code.");
+    }
   };
 
   const handleVerificationSuccess = () => {
     setModalVisible(false);
     // Automatically navigate to the home route
     router.replace("/");
+  };
+
+  const handleSocialAuth = async (strategy: 'oauth_google' | 'oauth_facebook' | 'oauth_apple') => {
+    try {
+      const { createdSessionId, setActive: setSSOActive } = await startSSOFlow({
+        strategy,
+      });
+      if (createdSessionId && setSSOActive) {
+        await setSSOActive({ session: createdSessionId });
+        router.replace("/");
+      }
+    } catch (err: any) {
+      // Do not show error on user cancellation
+      if (err.errors?.[0]?.code !== "auth_session_cancelled") {
+        Alert.alert("Social Auth Error", err.errors?.[0]?.message || err.message || "Failed to authenticate.");
+      }
+    }
   };
 
   return (
@@ -140,7 +213,7 @@ export default function SignIn() {
               activeOpacity={0.9}
               onPressIn={() => setPressedBtn("google")}
               onPressOut={() => setPressedBtn(null)}
-              onPress={() => setModalVisible(true)}
+              onPress={() => handleSocialAuth("oauth_google")}
               style={[
                 styles.socialButton,
                 pressedBtn === "google" && styles.socialButtonPressed
@@ -159,7 +232,7 @@ export default function SignIn() {
               activeOpacity={0.9}
               onPressIn={() => setPressedBtn("facebook")}
               onPressOut={() => setPressedBtn(null)}
-              onPress={() => setModalVisible(true)}
+              onPress={() => handleSocialAuth("oauth_facebook")}
               style={[
                 styles.socialButton,
                 pressedBtn === "facebook" && styles.socialButtonPressed
@@ -178,7 +251,7 @@ export default function SignIn() {
               activeOpacity={0.9}
               onPressIn={() => setPressedBtn("apple")}
               onPressOut={() => setPressedBtn(null)}
-              onPress={() => setModalVisible(true)}
+              onPress={() => handleSocialAuth("oauth_apple")}
               style={[
                 styles.socialButton,
                 pressedBtn === "apple" && styles.socialButtonPressed
@@ -213,6 +286,8 @@ export default function SignIn() {
         visible={modalVisible}
         email={email}
         onClose={() => setModalVisible(false)}
+        onVerify={handleVerifyCode}
+        onResend={handleResendCode}
         onSuccess={handleVerificationSuccess}
       />
     </SafeAreaView>

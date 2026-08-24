@@ -1,13 +1,23 @@
 import React, { useState } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
+import { useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import { images } from "../constants/images";
 
 export default function Onboarding() {
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useAuth();
   const [pressedBtn, setPressedBtn] = useState<string | null>(null);
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (isSignedIn) {
+    return <Redirect href="/" />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
