@@ -14,15 +14,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, Redirect } from "expo-router";
 import { Feather, FontAwesome } from "@expo/vector-icons";
-import { useSignIn, useAuth, useSSO } from "@clerk/expo";
+import { useSignIn, useAuth } from "@clerk/expo";
 import { images } from "../../constants/images";
 import VerificationModal from "../../components/VerificationModal";
+
+import { useSocialAuth } from "../../hooks/useSocialAuth";
 
 export default function SignIn() {
   const router = useRouter();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { signIn } = useSignIn();
-  const { startSSOFlow } = useSSO();
+  const { handleSocialAuth } = useSocialAuth();
   
   // Input field state
   const [email, setEmail] = useState("");
@@ -103,22 +105,7 @@ export default function SignIn() {
     router.replace("/");
   };
 
-  const handleSocialAuth = async (strategy: 'oauth_google' | 'oauth_facebook' | 'oauth_apple') => {
-    try {
-      const { createdSessionId, setActive: setSSOActive } = await startSSOFlow({
-        strategy,
-      });
-      if (createdSessionId && setSSOActive) {
-        await setSSOActive({ session: createdSessionId });
-        router.replace("/");
-      }
-    } catch (err: any) {
-      // Do not show error on user cancellation
-      if (err.errors?.[0]?.code !== "auth_session_cancelled") {
-        Alert.alert("Social Auth Error", err.errors?.[0]?.message || err.message || "Failed to authenticate.");
-      }
-    }
-  };
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
