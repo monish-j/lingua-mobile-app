@@ -1,12 +1,30 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
+import { useAuth } from "@clerk/expo";
 import { images } from "../constants/images";
 
 export default function Index() {
   const router = useRouter();
+  const { isSignedIn, isLoaded, signOut } = useAuth();
   const [pressedBtn, setPressedBtn] = useState<string | null>(null);
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to sign out.");
+    }
+  };
 
   const colorsList = {
     primary: [
@@ -51,10 +69,21 @@ export default function Index() {
         <TouchableOpacity 
           activeOpacity={0.9}
           onPress={() => router.push("/onboarding")}
-          className="btn-3d btn-3d-purple h-14 mb-8 items-center justify-center"
+          className="btn-3d btn-3d-purple h-14 mb-4 items-center justify-center"
         >
           <Text className="text-body-large font-poppins-bold text-neutral-background">
             GO TO ONBOARDING SCREEN
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          onPress={handleSignOut}
+          className="btn-3d btn-3d-neutral h-14 mb-8 items-center justify-center"
+        >
+          <Text className="text-body-large font-poppins-bold text-semantic-error">
+            SIGN OUT
           </Text>
         </TouchableOpacity>
 
