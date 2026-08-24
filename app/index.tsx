@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { images } from "../constants/images";
 
 export default function Index() {
+  const router = useRouter();
   const [pressedBtn, setPressedBtn] = useState<string | null>(null);
 
   const colorsList = {
@@ -37,13 +39,24 @@ export default function Index() {
         <View className="items-center mb-8 p-6 bg-neutral-surface rounded-3xl border border-neutral-border">
           <Image 
             source={images.mascotLogo} 
-            className="w-48 h-20"
+            style={{ width: 192, height: 80 }}
             resizeMode="contain"
           />
           <Text className="text-body-small mt-2 font-poppins-semibold tracking-widest uppercase text-neutral-text-secondary">
             Design System Spec
           </Text>
         </View>
+
+        {/* Preview Onboarding Screen Button */}
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          onPress={() => router.push("/onboarding")}
+          className="btn-3d btn-3d-purple h-14 mb-8 items-center justify-center"
+        >
+          <Text className="text-body-large font-poppins-bold text-neutral-background">
+            GO TO ONBOARDING SCREEN
+          </Text>
+        </TouchableOpacity>
 
         {/* Colors Section */}
         <View className="mb-8">
