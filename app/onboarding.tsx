@@ -89,7 +89,7 @@ export default function Onboarding() {
             activeOpacity={0.9}
             onPressIn={() => setPressedBtn("get-started")}
             onPressOut={() => setPressedBtn(null)}
-            onPress={() => router.push("/")}
+            onPress={() => router.push("/sign-up")}
             style={[
               styles.button3d,
               pressedBtn === "get-started" && styles.button3dPressed
