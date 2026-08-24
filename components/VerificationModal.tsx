@@ -28,8 +28,10 @@ export default function VerificationModal({
 }: VerificationModalProps) {
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionRef = useRef(0);
 
   // Helper to clear timeout safely
   const clearSuccessTimeout = () => {
@@ -40,18 +42,21 @@ export default function VerificationModal({
   };
 
   // Mock authentication-service verification helper
+  // Checks code correctness for pending account (mocked test code: "123456")
   const verifyCodeService = async (enteredCode: string): Promise<boolean> => {
     return new Promise((resolve) => {
       // Simulate API call to auth service
       setTimeout(() => {
-        resolve(true); // Always succeed for now (mocked auth)
+        resolve(enteredCode === "123456");
       }, 600);
     });
   };
 
   useEffect(() => {
     if (visible) {
+      sessionRef.current += 1; // Start a new verification session
       setCode("");
+      setError(null);
       setIsVerifying(false);
       // Autofocus after modal transition animation
       const timer = setTimeout(() => {
@@ -62,6 +67,7 @@ export default function VerificationModal({
         clearSuccessTimeout();
       };
     } else {
+      sessionRef.current += 1; // Invalidate active requests on hide
       clearSuccessTimeout();
     }
   }, [visible]);
@@ -74,6 +80,7 @@ export default function VerificationModal({
   }, []);
 
   const handleClose = () => {
+    sessionRef.current += 1; // Invalidate active requests on close
     clearSuccessTimeout();
     onClose();
   };
@@ -81,7 +88,7 @@ export default function VerificationModal({
   const handleChangeText = (text: string) => {
     if (isVerifying) return; // Prevent input changes during active verification
 
-    // Only allow numbers
+    setError(null); // Reset error state on typing
     const cleanText = text.replace(/[^0-9]/g, "");
     setCode(cleanText);
 
@@ -90,21 +97,42 @@ export default function VerificationModal({
       Keyboard.dismiss();
       setIsVerifying(true);
 
+      const sessionStarted = sessionRef.current;
+
       // Trigger authentication-service verification
       verifyCodeService(cleanText)
         .then((isValid) => {
+          // Verify result still belongs to current visible session
+          if (sessionStarted !== sessionRef.current || !visible) {
+            return; // Discard stale/dismissed session result
+          }
+
           if (isValid) {
             clearSuccessTimeout();
             successTimeoutRef.current = setTimeout(() => {
-              onSuccess();
+              // Confirm session is still valid before invoking success callback
+              if (sessionStarted === sessionRef.current && visible) {
+                onSuccess();
+              }
               setIsVerifying(false);
             }, 250);
           } else {
             setIsVerifying(false);
+            setError("Invalid verification code. Please try again.");
+            setCode(""); // Clear boxes for retry
+            // Refocus hidden text input for retry
+            setTimeout(() => {
+              if (sessionStarted === sessionRef.current && visible) {
+                inputRef.current?.focus();
+              }
+            }, 100);
           }
         })
         .catch(() => {
-          setIsVerifying(false);
+          if (sessionStarted === sessionRef.current && visible) {
+            setIsVerifying(false);
+            setError("Verification error. Please try again.");
+          }
         });
     }
   };
@@ -181,6 +209,13 @@ export default function VerificationModal({
                   );
                 })}
               </Pressable>
+
+              {/* Error feedback message */}
+              {error && (
+                <Text className="text-body-small text-semantic-error mt-2 font-poppins-semibold text-center">
+                  {error}
+                </Text>
+              )}
 
               {/* Hidden text input */}
               <TextInput
