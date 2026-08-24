@@ -27,20 +27,60 @@ export default function VerificationModal({
   email,
 }: VerificationModalProps) {
   const [code, setCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Helper to clear timeout safely
+  const clearSuccessTimeout = () => {
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = null;
+    }
+  };
+
+  // Mock authentication-service verification helper
+  const verifyCodeService = async (enteredCode: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      // Simulate API call to auth service
+      setTimeout(() => {
+        resolve(true); // Always succeed for now (mocked auth)
+      }, 600);
+    });
+  };
 
   useEffect(() => {
     if (visible) {
       setCode("");
+      setIsVerifying(false);
       // Autofocus after modal transition animation
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 150);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearSuccessTimeout();
+      };
+    } else {
+      clearSuccessTimeout();
     }
   }, [visible]);
 
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      clearSuccessTimeout();
+    };
+  }, []);
+
+  const handleClose = () => {
+    clearSuccessTimeout();
+    onClose();
+  };
+
   const handleChangeText = (text: string) => {
+    if (isVerifying) return; // Prevent input changes during active verification
+
     // Only allow numbers
     const cleanText = text.replace(/[^0-9]/g, "");
     setCode(cleanText);
@@ -48,14 +88,31 @@ export default function VerificationModal({
     if (cleanText.length === 6) {
       // Dismiss keyboard first for smooth UX
       Keyboard.dismiss();
-      setTimeout(() => {
-        onSuccess();
-      }, 250);
+      setIsVerifying(true);
+
+      // Trigger authentication-service verification
+      verifyCodeService(cleanText)
+        .then((isValid) => {
+          if (isValid) {
+            clearSuccessTimeout();
+            successTimeoutRef.current = setTimeout(() => {
+              onSuccess();
+              setIsVerifying(false);
+            }, 250);
+          } else {
+            setIsVerifying(false);
+          }
+        })
+        .catch(() => {
+          setIsVerifying(false);
+        });
     }
   };
 
   const handleBoxPress = () => {
-    inputRef.current?.focus();
+    if (!isVerifying) {
+      inputRef.current?.focus();
+    }
   };
 
   return (
@@ -63,13 +120,13 @@ export default function VerificationModal({
       visible={visible}
       transparent={true}
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <Pressable 
         style={styles.backdrop} 
         onPress={() => {
           Keyboard.dismiss();
-          onClose();
+          handleClose();
         }}
       >
         <KeyboardAvoidingView
@@ -86,7 +143,7 @@ export default function VerificationModal({
               <Text className="text-h3 font-poppins-bold text-neutral-text-primary">
                 Verify Email
               </Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                 <Feather name="x" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
@@ -102,7 +159,7 @@ export default function VerificationModal({
               <Pressable style={styles.otpContainer} onPress={handleBoxPress}>
                 {Array.from({ length: 6 }).map((_, index) => {
                   const digit = code[index] || "";
-                  const isFocused = index === code.length;
+                  const isFocused = index === code.length && !isVerifying;
                   
                   return (
                     <View
@@ -134,14 +191,21 @@ export default function VerificationModal({
                 maxLength={6}
                 style={styles.hiddenInput}
                 caretHidden={true}
+                editable={!isVerifying}
               />
 
-              <Text className="text-caption text-neutral-text-secondary text-center mt-6">
-                {"Didn't receive the code? "}
-                <Text className="font-poppins-semibold text-primary-purple">
-                  Resend
+              {isVerifying ? (
+                <Text className="text-body-medium text-primary-purple font-poppins-semibold mt-6 text-center">
+                  Verifying code...
                 </Text>
-              </Text>
+              ) : (
+                <Text className="text-caption text-neutral-text-secondary text-center mt-6">
+                  {"Didn't receive the code? "}
+                  <Text className="font-poppins-semibold text-primary-purple">
+                    Resend
+                  </Text>
+                </Text>
+              )}
             </View>
           </Pressable>
         </KeyboardAvoidingView>
