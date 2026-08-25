@@ -29,18 +29,4 @@ export const languages: Language[] = [
     flag: 'https://flagcdn.com/w320/de.png',
     accentColor: '#FF8A00', // Streak / Orange
   },
-  {
-    code: 'ko',
-    name: 'Korean',
-    nativeName: '한국어',
-    flag: 'https://flagcdn.com/w320/kr.png',
-    accentColor: '#A78BFA', // Purple Accent
-  },
-  {
-    code: 'zh',
-    name: 'Chinese',
-    nativeName: '中文',
-    flag: 'https://flagcdn.com/w320/cn.png',
-    accentColor: '#FF4D4F', // Crimson Red
-  },
 ];

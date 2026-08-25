@@ -51,10 +51,6 @@ export default function LanguageSelect() {
         return "8.5M learners";
       case "de":
         return "7.1M learners";
-      case "ko":
-        return "5.4M learners";
-      case "zh":
-        return "6.8M learners";
       default:
         return "1.2M learners";
     }
