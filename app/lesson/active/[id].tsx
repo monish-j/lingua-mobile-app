@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -26,15 +26,26 @@ export default function LessonActiveScreen() {
   // Variant 2: translation wordBank builder
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
 
-  // Variant 3: speaking voice recorder states
+  // Variant 3: speaking voice recorder states and timeout tracking ref
   const [isRecording, setIsRecording] = useState(false);
   const [speechText, setSpeechText] = useState("");
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Variant 4: matching_pairs columns selections
+  // Variant 4: matching_pairs columns selections and dedicated error state
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
   const [selectedRight, setSelectedRight] = useState<string | null>(null);
   const [matchedLefts, setMatchedLefts] = useState<string[]>([]);
-  const [matchingError, setMatchingError] = useState(false);
+  const [errorLeft, setErrorLeft] = useState<string | null>(null);
+  const [errorRight, setErrorRight] = useState<string | null>(null);
+
+  // Unmount cleanup for simulated recording timer
+  useEffect(() => {
+    return () => {
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!lesson || !lesson.activities || lesson.activities.length === 0) {
     return (
@@ -92,7 +103,7 @@ export default function LessonActiveScreen() {
       correct = speechText.length > 0;
     } 
     else if (currentActivity.type === "matching_pairs") {
-      const totalPairs = "pairs" in currentActivity ? (currentActivity.pairs as any[]).length : 0;
+      const totalPairs = currentActivity.pairs.length;
       correct = matchedLefts.length === totalPairs;
     }
 
@@ -108,6 +119,12 @@ export default function LessonActiveScreen() {
 
   // Advance to next card or finish lesson
   const handleNext = () => {
+    // Clear and reset the recording timer if running
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+
     // Reset all state variables
     setSelectedOption(null);
     setSelectedWords([]);
@@ -116,7 +133,8 @@ export default function LessonActiveScreen() {
     setSelectedLeft(null);
     setSelectedRight(null);
     setMatchedLefts([]);
-    setMatchingError(false);
+    setErrorLeft(null);
+    setErrorRight(null);
     setHasChecked(false);
 
     if (currentIdx < lesson.activities.length - 1) {
@@ -188,7 +206,7 @@ export default function LessonActiveScreen() {
     optionsList = currentActivity.options;
   }
 
-  // Compute state validation check
+  // Compute state validation check using type safety without direct casts
   let canCheck = false;
   if (
     currentActivity.type === "multiple_choice" || 
@@ -201,8 +219,7 @@ export default function LessonActiveScreen() {
   } else if (currentActivity.type === "speaking") {
     canCheck = speechText.length > 0;
   } else if (currentActivity.type === "matching_pairs") {
-    const totalPairs = "pairs" in currentActivity ? (currentActivity.pairs as any[]).length : 0;
-    canCheck = matchedLefts.length === totalPairs;
+    canCheck = matchedLefts.length === currentActivity.pairs.length;
   }
 
   return (
@@ -378,13 +395,20 @@ export default function LessonActiveScreen() {
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                 if (isRecording) {
+                  if (recordingTimeoutRef.current) {
+                    clearTimeout(recordingTimeoutRef.current);
+                    recordingTimeoutRef.current = null;
+                  }
                   setIsRecording(false);
                 } else {
                   setIsRecording(true);
-                  setTimeout(() => {
-                    setSpeechText(String(currentActivity.textToSpeak));
+                  recordingTimeoutRef.current = setTimeout(() => {
+                    if (currentActivity.type === "speaking" && "textToSpeak" in currentActivity) {
+                      setSpeechText(String(currentActivity.textToSpeak));
+                    }
                     setIsRecording(false);
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                    recordingTimeoutRef.current = null;
                   }, 2000);
                 }
               }}
@@ -411,116 +435,133 @@ export default function LessonActiveScreen() {
         )}
 
         {/* 5. RENDER MATCHING PAIRS COMPONENT */}
-        {currentActivity.type === "matching_pairs" && "pairs" in currentActivity && (
+        {currentActivity.type === "matching_pairs" && (
           <View className="gap-4">
             <Text className="text-body-small text-neutral-text-secondary text-center mb-2">
               Select a word on the left and its match on the right!
             </Text>
-            <View className="flex-row gap-6 mt-2">
-              {/* Left Column (Foreign Word) */}
-              <View className="flex-1 gap-3">
-                {(currentActivity.pairs as any[]).map((pair) => {
-                  const isMatched = matchedLefts.includes(pair.left);
-                  const isSelected = selectedLeft === pair.left;
-                  
-                  let btnStyle = "border-neutral-border bg-white";
-                  if (isMatched) btnStyle = "border-semantic-success bg-semantic-success/5 opacity-40";
-                  else if (isSelected) btnStyle = "border-primary-purple bg-primary-purple/5";
+            {(() => {
+              const matchingActivity = currentActivity;
+              return (
+                <View className="flex-row gap-6 mt-2">
+                  {/* Left Column (Foreign Word) */}
+                  <View className="flex-1 gap-3">
+                    {matchingActivity.pairs.map((pair) => {
+                      const isMatched = matchedLefts.includes(pair.left);
+                      const isSelected = selectedLeft === pair.left;
+                      const isError = errorLeft === pair.left;
+                      
+                      let btnStyle = "border-neutral-border bg-white";
+                      if (isMatched) btnStyle = "border-semantic-success bg-semantic-success/5 opacity-40";
+                      else if (isError) btnStyle = "border-semantic-error bg-semantic-error/5";
+                      else if (isSelected) btnStyle = "border-primary-purple bg-primary-purple/5";
 
-                  return (
-                    <TouchableOpacity
-                      key={pair.left}
-                      disabled={isMatched || hasChecked}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        setSelectedLeft(pair.left);
-                        
-                        if (selectedRight) {
-                          const match = (currentActivity.pairs as any[]).find(
-                            p => p.left === pair.left && p.right === selectedRight
-                          );
-                          if (match) {
-                            setMatchedLefts(prev => [...prev, pair.left]);
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-                          } else {
-                            setMatchingError(true);
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-                            setTimeout(() => setMatchingError(false), 800);
-                          }
-                          setSelectedLeft(null);
-                          setSelectedRight(null);
-                        }
-                      }}
-                      className={`p-4 border-2 rounded-2xl items-center justify-center h-14 ${btnStyle} ${
-                        matchingError && isSelected ? "border-semantic-error" : ""
-                      }`}
-                    >
-                      <Text className={`text-body-medium font-poppins-bold ${
-                        isMatched 
-                          ? "text-semantic-success" 
-                          : isSelected 
-                            ? "text-primary-purple" 
-                            : "text-neutral-text-primary"
-                      }`}>
-                        {pair.left}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                      return (
+                        <TouchableOpacity
+                          key={pair.left}
+                          disabled={isMatched || hasChecked}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                            setSelectedLeft(pair.left);
+                            
+                            if (selectedRight) {
+                              const match = matchingActivity.pairs.find(
+                                p => p.left === pair.left && p.right === selectedRight
+                              );
+                              if (match) {
+                                setMatchedLefts(prev => [...prev, pair.left]);
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                              } else {
+                                setErrorLeft(pair.left);
+                                setErrorRight(selectedRight);
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+                                setTimeout(() => {
+                                  setErrorLeft(null);
+                                  setErrorRight(null);
+                                }, 800);
+                              }
+                              setSelectedLeft(null);
+                              setSelectedRight(null);
+                            }
+                          }}
+                          className={`p-4 border-2 rounded-2xl items-center justify-center h-14 ${btnStyle}`}
+                        >
+                          <Text className={`text-body-medium font-poppins-bold ${
+                            isMatched 
+                              ? "text-semantic-success" 
+                              : isError
+                                ? "text-semantic-error"
+                                : isSelected 
+                                  ? "text-primary-purple" 
+                                  : "text-neutral-text-primary"
+                          }`}>
+                            {pair.left}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
 
-              {/* Right Column (English translation) */}
-              <View className="flex-1 gap-3">
-                {(currentActivity.pairs as any[]).map((pair) => {
-                  const isMatched = matchedLefts.includes(pair.left);
-                  const isSelected = selectedRight === pair.right;
-                  
-                  let btnStyle = "border-neutral-border bg-white";
-                  if (isMatched) btnStyle = "border-semantic-success bg-semantic-success/5 opacity-40";
-                  else if (isSelected) btnStyle = "border-primary-purple bg-primary-purple/5";
+                  {/* Right Column (English translation) */}
+                  <View className="flex-1 gap-3">
+                    {matchingActivity.pairs.map((pair) => {
+                      const isMatched = matchedLefts.includes(pair.left);
+                      const isSelected = selectedRight === pair.right;
+                      const isError = errorRight === pair.right;
+                      
+                      let btnStyle = "border-neutral-border bg-white";
+                      if (isMatched) btnStyle = "border-semantic-success bg-semantic-success/5 opacity-40";
+                      else if (isError) btnStyle = "border-semantic-error bg-semantic-error/5";
+                      else if (isSelected) btnStyle = "border-primary-purple bg-primary-purple/5";
 
-                  return (
-                    <TouchableOpacity
-                      key={pair.right}
-                      disabled={isMatched || hasChecked}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        setSelectedRight(pair.right);
-                        
-                        if (selectedLeft) {
-                          const match = (currentActivity.pairs as any[]).find(
-                            p => p.left === selectedLeft && p.right === pair.right
-                          );
-                          if (match) {
-                            setMatchedLefts(prev => [...prev, selectedLeft]);
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-                          } else {
-                            setMatchingError(true);
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-                            setTimeout(() => setMatchingError(false), 800);
-                          }
-                          setSelectedLeft(null);
-                          setSelectedRight(null);
-                        }
-                      }}
-                      className={`p-4 border-2 rounded-2xl items-center justify-center h-14 ${btnStyle} ${
-                        matchingError && isSelected ? "border-semantic-error" : ""
-                      }`}
-                    >
-                      <Text className={`text-body-medium font-poppins-bold ${
-                        isMatched 
-                          ? "text-semantic-success" 
-                          : isSelected 
-                            ? "text-primary-purple" 
-                            : "text-neutral-text-primary"
-                      }`}>
-                        {pair.right}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+                      return (
+                        <TouchableOpacity
+                          key={pair.right}
+                          disabled={isMatched || hasChecked}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                            setSelectedRight(pair.right);
+                            
+                            if (selectedLeft) {
+                              const match = matchingActivity.pairs.find(
+                                p => p.left === selectedLeft && p.right === pair.right
+                              );
+                              if (match) {
+                                setMatchedLefts(prev => [...prev, selectedLeft]);
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                              } else {
+                                setErrorLeft(selectedLeft);
+                                setErrorRight(pair.right);
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+                                setTimeout(() => {
+                                  setErrorLeft(null);
+                                  setErrorRight(null);
+                                }, 800);
+                              }
+                              setSelectedLeft(null);
+                              setSelectedRight(null);
+                            }
+                          }}
+                          className={`p-4 border-2 rounded-2xl items-center justify-center h-14 ${btnStyle}`}
+                        >
+                          <Text className={`text-body-medium font-poppins-bold ${
+                            isMatched 
+                              ? "text-semantic-success" 
+                              : isError
+                                ? "text-semantic-error"
+                                : isSelected 
+                                  ? "text-primary-purple" 
+                                  : "text-neutral-text-primary"
+                          }`}>
+                            {pair.right}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ScrollView>
