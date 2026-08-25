@@ -51,6 +51,7 @@ export default function HomeScreen() {
             try {
               setSelectedLanguageCode(null);
               await AsyncStorage.removeItem("lingua-app-storage");
+              // Display success confirmation and redirect to entry routing
               Alert.alert("Success", "Language selection state cleared!", [
                 { text: "OK", onPress: () => router.replace("/") }
               ]);
@@ -154,6 +155,7 @@ export default function HomeScreen() {
             <TouchableOpacity 
               activeOpacity={0.9}
               className="bg-white px-6 py-2.5 rounded-full self-start"
+              // Route to the dynamic lesson details screen passing the current lesson ID
               onPress={() => router.push({ pathname: "/lesson/[id]", params: { id: currentLesson.id } })}
             >
               <Text className="text-body-medium font-poppins-bold text-primary-purple">
