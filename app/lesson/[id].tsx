@@ -12,13 +12,40 @@ export default function LessonDetailsScreen() {
   const { id } = useLocalSearchParams();
 
   // Find the lesson in the dataset
-  const lesson = lessons.find((l) => l.id === id) || lessons[0];
+  const lesson = lessons.find((l) => l.id === id);
+
+  // Handle missing lesson safely
+  if (!lesson) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View className="flex-1 items-center justify-center bg-neutral-background px-6">
+          <Feather name="alert-circle" size={48} color="#FF4D4F" className="mb-4" />
+          <Text className="text-h2 font-poppins-bold text-neutral-text-primary text-center mb-2">
+            Lesson Not Found
+          </Text>
+          <Text className="text-body-medium text-neutral-text-secondary text-center mb-6">
+            The requested lesson details could not be loaded.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)/home")}
+            className="btn-3d btn-3d-purple h-12 px-6 items-center justify-center"
+          >
+            <Text className="text-body-medium font-poppins-bold text-neutral-background">
+              Go Back Home
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Derive unit details only after lesson validation
   const unit = units.find((u) => u.id === lesson.unitId);
 
   const handleStart = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    // Placeholder action for launching interactive activity exercises
-    router.replace({ pathname: "/(tabs)/home" });
+    // Navigate to the interactive activity session runner screen
+    router.push({ pathname: "/lesson/active/[id]", params: { id: lesson.id } });
   };
 
   return (
