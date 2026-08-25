@@ -29,9 +29,15 @@ export default function LanguageSelect() {
 
   const handleConfirm = () => {
     if (selectedCode) {
+      const isInitialSelection = !selectedLanguageCode;
       setSelectedLanguageCode(selectedCode);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      router.back();
+      
+      if (isInitialSelection) {
+        router.replace("/");
+      } else {
+        router.back();
+      }
     }
   };
 
@@ -62,13 +68,15 @@ export default function LanguageSelect() {
         
         {/* Sticky Header */}
         <View className="flex-row items-center justify-center px-6 py-4 border-b border-neutral-border relative bg-neutral-background">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="chevron-left" size={28} color="#0D132B" />
-          </TouchableOpacity>
+          {selectedLanguageCode && (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Feather name="chevron-left" size={28} color="#0D132B" />
+            </TouchableOpacity>
+          )}
           <Text className="text-h3 font-poppins-bold text-neutral-text-primary">
             Choose a language
           </Text>
