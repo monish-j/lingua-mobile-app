@@ -128,7 +128,7 @@ export default function HomeScreen() {
             </View>
             {/* Progress bar */}
             <View className="h-2.5 w-full bg-[#E5E7EB] rounded-full overflow-hidden">
-              <View className="h-full bg-semantic-streak rounded-full" style={{ width: "75%" }} />
+              <View className="h-full bg-semantic-streak rounded-full w-[75%]" />
             </View>
           </View>
           {/* Treasure Chest illustration */}

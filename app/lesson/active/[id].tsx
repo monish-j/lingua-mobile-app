@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -14,12 +14,27 @@ export default function LessonActiveScreen() {
   // Find the lesson in the dataset
   const lesson = lessons.find((l) => l.id === id);
 
-  // State to track current activity index and user selection
+  // Core exercise runner states
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+
+  // Variant 1: multiple_choice / fill_in_blank / listening options
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+
+  // Variant 2: translation wordBank builder
+  const [selectedWords, setSelectedWords] = useState<string[]>([]);
+
+  // Variant 3: speaking voice recorder states
+  const [isRecording, setIsRecording] = useState(false);
+  const [speechText, setSpeechText] = useState("");
+
+  // Variant 4: matching_pairs columns selections
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [selectedRight, setSelectedRight] = useState<string | null>(null);
+  const [matchedLefts, setMatchedLefts] = useState<string[]>([]);
+  const [matchingError, setMatchingError] = useState(false);
 
   if (!lesson || !lesson.activities || lesson.activities.length === 0) {
     return (
@@ -43,26 +58,42 @@ export default function LessonActiveScreen() {
   }
 
   const currentActivity = lesson.activities[currentIdx];
-  const progressPercent = ((currentIdx) / lesson.activities.length) * 100;
+  const progressPercent = (currentIdx / lesson.activities.length) * 100;
 
+  // Single option selection handler (multiple_choice, fill_in_blank, listening)
   const handleSelectOption = (option: string) => {
     if (hasChecked) return;
     setSelectedOption(option);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
 
+  // Answer validation and correctness checker
   const handleCheckAnswer = () => {
-    if (!selectedOption) return;
-
     let correct = false;
-    // Check answer based on activity type
-    if (currentActivity.type === "multiple_choice" && "correctAnswer" in currentActivity) {
-      correct = selectedOption === currentActivity.correctAnswer;
-    } else if (currentActivity.type === "fill_in_blank" && "correctAnswer" in currentActivity) {
-      correct = selectedOption === currentActivity.correctAnswer;
-    } else {
-      // Default fallback for other activity types
-      correct = true;
+
+    if (
+      currentActivity.type === "multiple_choice" || 
+      currentActivity.type === "fill_in_blank" || 
+      currentActivity.type === "listening"
+    ) {
+      if (!selectedOption) return;
+      const targetAns = "correctAnswer" in currentActivity ? String(currentActivity.correctAnswer) : "";
+      correct = selectedOption.toLowerCase().trim() === targetAns.toLowerCase().trim();
+    } 
+    else if (currentActivity.type === "translation") {
+      if (selectedWords.length === 0) return;
+      const userSentence = selectedWords.join(" ").toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim();
+      const validSentences = "correctTranslations" in currentActivity 
+        ? (currentActivity.correctTranslations as string[]).map(t => t.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim())
+        : [];
+      correct = validSentences.includes(userSentence);
+    } 
+    else if (currentActivity.type === "speaking") {
+      correct = speechText.length > 0;
+    } 
+    else if (currentActivity.type === "matching_pairs") {
+      const totalPairs = "pairs" in currentActivity ? (currentActivity.pairs as any[]).length : 0;
+      correct = matchedLefts.length === totalPairs;
     }
 
     setIsCorrect(correct);
@@ -75,11 +106,19 @@ export default function LessonActiveScreen() {
     }
   };
 
+  // Advance to next card or finish lesson
   const handleNext = () => {
-    // Reset state for next activity
+    // Reset all state variables
     setSelectedOption(null);
+    setSelectedWords([]);
+    setIsRecording(false);
+    setSpeechText("");
+    setSelectedLeft(null);
+    setSelectedRight(null);
+    setMatchedLefts([]);
+    setMatchingError(false);
     setHasChecked(false);
-    
+
     if (currentIdx < lesson.activities.length - 1) {
       setCurrentIdx((prev) => prev + 1);
     } else {
@@ -97,7 +136,6 @@ export default function LessonActiveScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View className="flex-1 items-center justify-center px-6 py-12">
-          {/* Celebrating Mascot */}
           <Image 
             source={images.mascotWelcome}
             style={{ width: 200, height: 200, marginBottom: 24 }}
@@ -111,7 +149,6 @@ export default function LessonActiveScreen() {
             {"You've completed \"" + lesson.title + "\" and earned +" + lesson.xp + " XP!"}
           </Text>
 
-          {/* XP Reward card info */}
           <View className="w-full bg-[#FFF4E6] border border-[#FFE0B2] p-5 rounded-2xl flex-row items-center justify-between mb-12">
             <View className="flex-row items-center gap-3">
               <View className="bg-semantic-streak/10 p-2.5 rounded-xl">
@@ -145,15 +182,32 @@ export default function LessonActiveScreen() {
     );
   }
 
-  // Determine active options
-  let options: string[] = [];
-  if ("options" in currentActivity) {
-    options = currentActivity.options;
+  // Derive if option select cards should render
+  let optionsList: string[] = [];
+  if ("options" in currentActivity && Array.isArray(currentActivity.options)) {
+    optionsList = currentActivity.options;
+  }
+
+  // Compute state validation check
+  let canCheck = false;
+  if (
+    currentActivity.type === "multiple_choice" || 
+    currentActivity.type === "fill_in_blank" || 
+    currentActivity.type === "listening"
+  ) {
+    canCheck = selectedOption !== null;
+  } else if (currentActivity.type === "translation") {
+    canCheck = selectedWords.length > 0;
+  } else if (currentActivity.type === "speaking") {
+    canCheck = speechText.length > 0;
+  } else if (currentActivity.type === "matching_pairs") {
+    const totalPairs = "pairs" in currentActivity ? (currentActivity.pairs as any[]).length : 0;
+    canCheck = matchedLefts.length === totalPairs;
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header with Close and Progress Bar */}
+      {/* Header bar */}
       <View className="flex-row items-center px-6 py-4 bg-neutral-background relative">
         <TouchableOpacity
           onPress={() => router.replace("/(tabs)/home")}
@@ -162,7 +216,6 @@ export default function LessonActiveScreen() {
           <Feather name="x" size={24} color="#6B7280" />
         </TouchableOpacity>
         
-        {/* Progress Bar Container */}
         <View className="flex-1 h-3 bg-neutral-surface rounded-full mx-4 overflow-hidden border border-neutral-border">
           <View className="h-full bg-primary-green rounded-full" style={{ width: `${progressPercent}%` }} />
         </View>
@@ -173,7 +226,7 @@ export default function LessonActiveScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Activity Question Header */}
+        {/* Activity Title */}
         <Text className="text-caption font-poppins-bold text-primary-purple uppercase tracking-widest mb-2">
           {currentActivity.type.replace("_", " ")}
         </Text>
@@ -181,16 +234,34 @@ export default function LessonActiveScreen() {
           {currentActivity.question}
         </Text>
 
-        {/* Options list */}
-        {options.length > 0 ? (
+        {/* 1. RENDER LISTENING AUDIO BUTTON */}
+        {currentActivity.type === "listening" && "textToSpeak" in currentActivity && (
+          <View className="items-center mb-6">
+            <TouchableOpacity 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                Alert.alert("Listening Hint", `"${currentActivity.textToSpeak}"`);
+              }}
+              className="w-20 h-20 rounded-full bg-primary-purple items-center justify-center shadow-lg"
+            >
+              <Feather name="volume-2" size={32} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text className="text-body-small text-neutral-text-secondary mt-2">
+              Tap to hear active audio hint
+            </Text>
+          </View>
+        )}
+
+        {/* 2. RENDER MULTIPLE CHOICE / FILL IN BLANK / LISTENING OPTIONS */}
+        {optionsList.length > 0 && (
           <View className="gap-3">
-            {options.map((option, idx) => {
+            {optionsList.map((option, idx) => {
               const isSelected = selectedOption === option;
-              
               let cardStyle = "border-neutral-border bg-white";
               if (isSelected) cardStyle = "border-primary-purple bg-primary-purple/5";
               if (hasChecked) {
-                if (option === ("correctAnswer" in currentActivity ? currentActivity.correctAnswer : "")) {
+                const correctAns = "correctAnswer" in currentActivity ? String(currentActivity.correctAnswer) : "";
+                if (option === correctAns) {
                   cardStyle = "border-semantic-success bg-semantic-success/5";
                 } else if (isSelected && !isCorrect) {
                   cardStyle = "border-semantic-error bg-semantic-error/5";
@@ -211,7 +282,6 @@ export default function LessonActiveScreen() {
                     {option}
                   </Text>
                   
-                  {/* Circle Selection Indicator */}
                   <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${
                     isSelected ? "border-primary-purple" : "border-neutral-border"
                   }`}>
@@ -221,16 +291,236 @@ export default function LessonActiveScreen() {
               );
             })}
           </View>
-        ) : (
-          /* Fallback view for other interactive styles (e.g. matching pairs) */
-          <View className="p-8 bg-neutral-surface border border-neutral-border rounded-3xl items-center justify-center">
-            <Feather name="smile" size={48} color="#6C4EF5" className="mb-4" />
-            <Text className="text-body-medium font-poppins-bold text-neutral-text-primary text-center">
-              Practice this exercise mentally!
+        )}
+
+        {/* 3. RENDER TRANSLATION COMPONENT */}
+        {currentActivity.type === "translation" && "wordBank" in currentActivity && (
+          <View className="gap-6">
+            <View className="p-4 bg-neutral-surface border border-neutral-border rounded-2xl flex-row items-center gap-3">
+              <Feather name="message-square" size={20} color="#6C4EF5" />
+              <Text className="text-body-large font-poppins-semibold text-neutral-text-primary">
+                {"sentence" in currentActivity ? String(currentActivity.sentence) : ""}
+              </Text>
+            </View>
+
+            {/* Translation Output board */}
+            <View className="min-h-[100px] p-4 bg-white border-2 border-dashed border-neutral-border rounded-2xl flex-row flex-wrap gap-2 items-center">
+              {selectedWords.length === 0 ? (
+                <Text className="text-body-medium text-neutral-text-secondary font-poppins-medium">
+                  Tap words from the bank to assemble your translation...
+                </Text>
+              ) : (
+                selectedWords.map((word, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    disabled={hasChecked}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setSelectedWords(prev => prev.filter((_, i) => i !== idx));
+                    }}
+                    className="px-4 py-2 bg-primary-purple/10 border border-primary-purple/20 rounded-xl"
+                  >
+                    <Text className="text-body-medium font-poppins-semibold text-primary-purple">
+                      {word}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+
+            {/* Translation Word Bank */}
+            <View className="flex-row flex-wrap gap-2.5 justify-center mt-4">
+              {(currentActivity.wordBank as string[]).map((word, idx) => {
+                const occurrences = selectedWords.filter(w => w === word).length;
+                const totalInBank = (currentActivity.wordBank as string[]).filter(w => w === word).length;
+                const isUsed = occurrences >= totalInBank;
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    disabled={isUsed || hasChecked}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setSelectedWords(prev => [...prev, word]);
+                    }}
+                    className={`px-4 py-2.5 rounded-xl border-2 ${
+                      isUsed 
+                        ? "bg-neutral-border/30 border-neutral-border/30 opacity-40" 
+                        : "bg-white border-neutral-border active:bg-neutral-surface"
+                    }`}
+                  >
+                    <Text className={`text-body-medium font-poppins-semibold ${
+                      isUsed ? "text-neutral-text-secondary" : "text-neutral-text-primary"
+                    }`}>
+                      {word}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* 4. RENDER SPEAKING COMPONENT */}
+        {currentActivity.type === "speaking" && "textToSpeak" in currentActivity && (
+          <View className="items-center gap-6 py-6">
+            <View className="items-center p-6 bg-neutral-surface border border-neutral-border rounded-2xl w-full">
+              <Text className="text-h2 font-poppins-bold text-primary-purple text-center">
+                {String(currentActivity.textToSpeak)}
+              </Text>
+              <Text className="text-body-small text-neutral-text-secondary text-center mt-2 italic font-poppins-medium">
+                {"\"" + ("translation" in currentActivity ? String(currentActivity.translation) : "") + "\""}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={hasChecked}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                if (isRecording) {
+                  setIsRecording(false);
+                } else {
+                  setIsRecording(true);
+                  setTimeout(() => {
+                    setSpeechText(String(currentActivity.textToSpeak));
+                    setIsRecording(false);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                  }, 2000);
+                }
+              }}
+              className={`w-24 h-24 rounded-full items-center justify-center border-4 ${
+                isRecording 
+                  ? "bg-semantic-error border-semantic-error/30" 
+                  : speechText 
+                    ? "bg-semantic-success border-semantic-success/30" 
+                    : "bg-primary-purple border-primary-purple/30"
+              }`}
+            >
+              <Feather name={isRecording ? "mic-off" : "mic"} size={36} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <Text className="text-body-medium font-poppins-semibold text-neutral-text-primary text-center">
+              {isRecording 
+                ? "Recording... Repeat the text above" 
+                : speechText 
+                  ? "Voice checked successfully!" 
+                  : "Tap to record your voice review"
+              }
             </Text>
-            <Text className="text-body-small text-neutral-text-secondary text-center mt-1">
-              Select complete below to proceed.
+          </View>
+        )}
+
+        {/* 5. RENDER MATCHING PAIRS COMPONENT */}
+        {currentActivity.type === "matching_pairs" && "pairs" in currentActivity && (
+          <View className="gap-4">
+            <Text className="text-body-small text-neutral-text-secondary text-center mb-2">
+              Select a word on the left and its match on the right!
             </Text>
+            <View className="flex-row gap-6 mt-2">
+              {/* Left Column (Foreign Word) */}
+              <View className="flex-1 gap-3">
+                {(currentActivity.pairs as any[]).map((pair) => {
+                  const isMatched = matchedLefts.includes(pair.left);
+                  const isSelected = selectedLeft === pair.left;
+                  
+                  let btnStyle = "border-neutral-border bg-white";
+                  if (isMatched) btnStyle = "border-semantic-success bg-semantic-success/5 opacity-40";
+                  else if (isSelected) btnStyle = "border-primary-purple bg-primary-purple/5";
+
+                  return (
+                    <TouchableOpacity
+                      key={pair.left}
+                      disabled={isMatched || hasChecked}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setSelectedLeft(pair.left);
+                        
+                        if (selectedRight) {
+                          const match = (currentActivity.pairs as any[]).find(
+                            p => p.left === pair.left && p.right === selectedRight
+                          );
+                          if (match) {
+                            setMatchedLefts(prev => [...prev, pair.left]);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                          } else {
+                            setMatchingError(true);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+                            setTimeout(() => setMatchingError(false), 800);
+                          }
+                          setSelectedLeft(null);
+                          setSelectedRight(null);
+                        }
+                      }}
+                      className={`p-4 border-2 rounded-2xl items-center justify-center h-14 ${btnStyle} ${
+                        matchingError && isSelected ? "border-semantic-error" : ""
+                      }`}
+                    >
+                      <Text className={`text-body-medium font-poppins-bold ${
+                        isMatched 
+                          ? "text-semantic-success" 
+                          : isSelected 
+                            ? "text-primary-purple" 
+                            : "text-neutral-text-primary"
+                      }`}>
+                        {pair.left}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Right Column (English translation) */}
+              <View className="flex-1 gap-3">
+                {(currentActivity.pairs as any[]).map((pair) => {
+                  const isMatched = matchedLefts.includes(pair.left);
+                  const isSelected = selectedRight === pair.right;
+                  
+                  let btnStyle = "border-neutral-border bg-white";
+                  if (isMatched) btnStyle = "border-semantic-success bg-semantic-success/5 opacity-40";
+                  else if (isSelected) btnStyle = "border-primary-purple bg-primary-purple/5";
+
+                  return (
+                    <TouchableOpacity
+                      key={pair.right}
+                      disabled={isMatched || hasChecked}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setSelectedRight(pair.right);
+                        
+                        if (selectedLeft) {
+                          const match = (currentActivity.pairs as any[]).find(
+                            p => p.left === selectedLeft && p.right === pair.right
+                          );
+                          if (match) {
+                            setMatchedLefts(prev => [...prev, selectedLeft]);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                          } else {
+                            setMatchingError(true);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+                            setTimeout(() => setMatchingError(false), 800);
+                          }
+                          setSelectedLeft(null);
+                          setSelectedRight(null);
+                        }
+                      }}
+                      className={`p-4 border-2 rounded-2xl items-center justify-center h-14 ${btnStyle} ${
+                        matchingError && isSelected ? "border-semantic-error" : ""
+                      }`}
+                    >
+                      <Text className={`text-body-medium font-poppins-bold ${
+                        isMatched 
+                          ? "text-semantic-success" 
+                          : isSelected 
+                            ? "text-primary-purple" 
+                            : "text-neutral-text-primary"
+                      }`}>
+                        {pair.right}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -238,7 +528,6 @@ export default function LessonActiveScreen() {
       {/* Sticky Bottom Action Panel */}
       <View style={styles.actionPanel}>
         {hasChecked ? (
-          /* Banner Feedback View */
           <View className="mb-4">
             <View className={`p-4 rounded-2xl flex-row items-center gap-3 mb-4 ${
               isCorrect ? "bg-semantic-success/10 border border-semantic-success/20" : "bg-semantic-error/10 border border-semantic-error/20"
@@ -252,12 +541,14 @@ export default function LessonActiveScreen() {
                 <Text className={`text-body-medium font-poppins-bold ${
                   isCorrect ? "text-semantic-success" : "text-semantic-error"
                 }`}>
-                  {isCorrect ? "Excellent job!" : "Correct answer:"}
+                  {isCorrect ? "Excellent job!" : "Incorrect Answer"}
                 </Text>
                 <Text className="text-body-small text-neutral-text-secondary">
                   {isCorrect 
                     ? `Earned +${currentActivity.xpReward} XP!` 
-                    : ("correctAnswer" in currentActivity ? (currentActivity.correctAnswer as string) : "Good try!")
+                    : ("correctAnswer" in currentActivity 
+                        ? `Correct answer: ${currentActivity.correctAnswer}` 
+                        : "Good try!")
                   }
                 </Text>
               </View>
@@ -274,20 +565,19 @@ export default function LessonActiveScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          /* Check Answer trigger button */
           <TouchableOpacity
             activeOpacity={0.9}
-            disabled={!selectedOption && options.length > 0}
-            onPress={options.length > 0 ? handleCheckAnswer : handleNext}
+            disabled={!canCheck}
+            onPress={handleCheckAnswer}
             className={`btn-3d ${
-              (selectedOption || options.length === 0) ? "btn-3d-green" : "bg-neutral-border border-b-0"
+              canCheck ? "btn-3d-green" : "bg-neutral-border border-b-0"
             } h-14 w-full items-center justify-center`}
-            style={(!selectedOption && options.length > 0) ? { opacity: 0.5 } : {}}
+            style={!canCheck ? { opacity: 0.5 } : {}}
           >
             <Text className={`text-body-large font-poppins-bold ${
-              (selectedOption || options.length === 0) ? "text-neutral-background" : "text-neutral-text-secondary"
+              canCheck ? "text-neutral-background" : "text-neutral-text-secondary"
             }`}>
-              {options.length > 0 ? "CHECK ANSWER" : "CONTINUE"}
+              CHECK ANSWER
             </Text>
           </TouchableOpacity>
         )}
