@@ -38,16 +38,30 @@ export default function HomeScreen() {
   const activeLessons = lessons.filter((l) => l.unitId === activeUnit.id);
   const currentLesson = activeLessons[0] || lessons[0];
 
-  const handleResetState = async () => {
-    try {
-      setSelectedLanguageCode(null);
-      await AsyncStorage.removeItem("lingua-app-storage");
-      Alert.alert("Success", "Language selection state cleared!", [
-        { text: "OK", onPress: () => router.replace("/") }
-      ]);
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to clear state.");
-    }
+  const handleResetState = () => {
+    Alert.alert(
+      "Reset Progress",
+      "Are you sure you want to reset your language selection and progress state?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSelectedLanguageCode(null);
+              await AsyncStorage.removeItem("lingua-app-storage");
+              Alert.alert("Success", "Language selection state cleared!", [
+                { text: "OK", onPress: () => router.replace("/") }
+              ]);
+            } catch (err: unknown) {
+              const errorMessage = err instanceof Error ? err.message : "Failed to clear state.";
+              Alert.alert("Error", errorMessage);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -84,7 +98,7 @@ export default function HomeScreen() {
             >
               <Image 
                 source={images.streakFire}
-                style={{ width: 20, height: 20 }}
+                className="w-5 h-5"
                 resizeMode="contain"
               />
               <Text className="text-body-medium font-poppins-bold text-semantic-streak">
@@ -120,7 +134,7 @@ export default function HomeScreen() {
           {/* Treasure Chest illustration */}
           <Image 
             source={images.treasure}
-            style={{ width: 68, height: 68 }}
+            className="w-[68px] h-[68px]"
             resizeMode="contain"
           />
         </View>
@@ -140,7 +154,7 @@ export default function HomeScreen() {
             <TouchableOpacity 
               activeOpacity={0.9}
               className="bg-white px-6 py-2.5 rounded-full self-start"
-              onPress={() => Alert.alert("Start Lesson", `Starting Lesson: "${currentLesson.title}"`)}
+              onPress={() => router.push({ pathname: "/lesson/[id]", params: { id: currentLesson.id } })}
             >
               <Text className="text-body-medium font-poppins-bold text-primary-purple">
                 Continue
@@ -240,18 +254,20 @@ export default function HomeScreen() {
 
 
         {/* Dev Tools resetting state helper */}
-        <View className="mb-6 mt-2 border-t border-dashed border-neutral-border pt-6 items-center">
-          <TouchableOpacity 
-            activeOpacity={0.8}
-            onPress={handleResetState}
-            className="flex-row items-center gap-2 px-5 py-3 bg-neutral-surface rounded-2xl border border-neutral-border active:bg-neutral-border/20"
-          >
-            <Feather name="refresh-cw" size={16} color="#6B7280" />
-            <Text className="text-body-small font-poppins-bold text-neutral-text-secondary">
-              Reset App State (Developer Helper)
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {__DEV__ && (
+          <View className="mb-6 mt-2 border-t border-dashed border-neutral-border pt-6 items-center">
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={handleResetState}
+              className="flex-row items-center gap-2 px-5 py-3 bg-neutral-surface rounded-2xl border border-neutral-border active:bg-neutral-border/20"
+            >
+              <Feather name="refresh-cw" size={16} color="#6B7280" />
+              <Text className="text-body-small font-poppins-bold text-neutral-text-secondary">
+                Reset App State (Developer Helper)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>
