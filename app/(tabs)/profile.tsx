@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      setSelectedLanguageCode(null);
       router.replace("/onboarding");
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to sign out.");

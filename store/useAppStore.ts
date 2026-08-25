@@ -25,7 +25,7 @@ export const useAppStore = create<AppState>()(
       }),
       onRehydrateStorage: (state) => {
         return (state, error) => {
-          if (!error && state) {
+          if (state) {
             state.setHasHydrated(true);
           }
         };
