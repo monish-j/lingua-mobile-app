@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { usePostHog } from "posthog-react-native";
@@ -39,6 +39,26 @@ export default function LessonActiveScreen() {
   const [matchedLefts, setMatchedLefts] = useState<string[]>([]);
   const [errorLeft, setErrorLeft] = useState<string | null>(null);
   const [errorRight, setErrorRight] = useState<string | null>(null);
+
+  const navigation = useNavigation();
+  const hasAbandonedCaptured = useRef(false);
+
+  const captureAbandonment = React.useCallback(() => {
+    if (isFinished || hasAbandonedCaptured.current) return;
+    hasAbandonedCaptured.current = true;
+    posthog.capture("lesson_abandoned", {
+      lesson_id: lesson.id,
+      activity_index: currentIdx,
+      activity_count: lesson.activities.length,
+    });
+  }, [isFinished, lesson.id, currentIdx, lesson.activities.length, posthog]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      captureAbandonment();
+    });
+    return unsubscribe;
+  }, [navigation, captureAbandonment]);
 
   // Unmount cleanup for simulated recording timer
   useEffect(() => {
@@ -163,11 +183,7 @@ export default function LessonActiveScreen() {
   };
 
   const handleExitLesson = () => {
-    posthog.capture("lesson_abandoned", {
-      lesson_id: lesson.id,
-      activity_index: currentIdx,
-      activity_count: lesson.activities.length,
-    });
+    captureAbandonment();
     router.replace("/(tabs)/home");
   };
 
