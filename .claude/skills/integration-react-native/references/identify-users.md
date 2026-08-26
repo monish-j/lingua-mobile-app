@@ -254,8 +254,13 @@ class DeepLinkIdentityManager {
         }
     }
     private func validateHandoffToken(_ token: String) -> String? {
-        // Verify token signatures/expiration securely
-        return token // Placeholder for actual decoded distinct ID
+        // PSEUDOCODE: Replace this with secure signature and expiration verification
+        // (e.g., verifying a JWT signature using a secret or public key).
+        // If the token is invalid or expired, return nil.
+        guard let payload = decodeAndVerifyToken(token), !payload.isExpired else {
+            return nil
+        }
+        return payload.distinctId
     }
     // MARK: - Login/Signup
     func handleLogin(canonicalUserId: String) {
@@ -292,8 +297,14 @@ object DeepLinkIdentityManager {
         }
     }
     private fun validateHandoffToken(token: String): String? {
-        // Verify token signatures/expiration securely
-        return token // Placeholder for actual decoded distinct ID
+        // PSEUDOCODE: Replace this with secure signature and expiration verification
+        // (e.g., verifying a JWT signature using a secret or public key).
+        // If the token is invalid or expired, return null.
+        val payload = decodeAndVerifyToken(token) ?: return null
+        if (payload.isExpired()) {
+            return null
+        }
+        return payload.distinctId
     }
     // Login/Signup
     fun handleLogin(canonicalUserId: String) {

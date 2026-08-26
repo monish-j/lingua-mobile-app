@@ -44,14 +44,14 @@ export default function LessonActiveScreen() {
   const hasAbandonedCaptured = useRef(false);
 
   const captureAbandonment = React.useCallback(() => {
-    if (isFinished || hasAbandonedCaptured.current) return;
+    if (!lesson || isFinished || hasAbandonedCaptured.current) return;
     hasAbandonedCaptured.current = true;
     posthog.capture("lesson_abandoned", {
       lesson_id: lesson.id,
       activity_index: currentIdx,
       activity_count: lesson.activities.length,
     });
-  }, [isFinished, lesson.id, currentIdx, lesson.activities.length, posthog]);
+  }, [isFinished, lesson, currentIdx, posthog]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
