@@ -35,10 +35,15 @@ export const useAppStore = create<AppState>()(
         selectedLanguageCode: state.selectedLanguageCode,
         completedLessonIds: state.completedLessonIds,
       }),
-      onRehydrateStorage: (state) => {
+      onRehydrateStorage: () => {
         return (state, error) => {
+          if (error) {
+            console.error("Failed to rehydrate store from AsyncStorage:", error);
+          }
           if (state) {
             state.setHasHydrated(true);
+          } else {
+            useAppStore.setState({ hasHydrated: true });
           }
         };
       },

@@ -30,10 +30,18 @@ export default function AudioLessonScreen() {
   const unit = units.find((u) => u.id === lesson?.unitId);
   const language = languages.find((l) => l.code === unit?.languageCode) || languages[0];
 
+  // Localized fallback greeting based on language
+  const greeting =
+    language.code === "es" ? "¡Hola!" :
+    language.code === "fr" ? "Bonjour !" :
+    language.code === "ja" ? "こんにちは !" :
+    language.code === "de" ? "Hallo !" :
+    "Hello!";
+
   // AI Teacher prompt details (with dynamic fallbacks)
   const teacherPrompt = lesson?.aiTeacherPrompt || {
     systemPrompt: `You are a supportive AI teacher for ${language.name}.`,
-    welcomeMessage: `¡Hola! Welcome to your ${language.name} lesson: ${lesson?.title || "Audio Lesson"}. Let's practice!`,
+    welcomeMessage: `${greeting} Welcome to your ${language.name} lesson: ${lesson?.title || "Audio Lesson"}. Let's practice!`,
     suggestedTopics: ["Greeting each other", "Reviewing phrases"],
     keyVocabulary: lesson?.vocabulary?.map((v) => v.word) || [],
     keyPhrases: lesson?.phrases?.map((p) => p.phrase) || [],
@@ -106,13 +114,17 @@ export default function AudioLessonScreen() {
     return () => clearTimeout(timer);
   }, [id, bubbleOpacity, lesson?.phrases, teacherPrompt.welcomeMessage]);
 
-  // Speak simulation logic when mic is turned on
+  // 1. Transition status to "listening" and trigger haptics when mic is unmuted
   useEffect(() => {
     if (isMicActive && !isSpeakingSimulated && status === "online") {
       setStatus("listening");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+  }, [isMicActive, isSpeakingSimulated, status]);
 
-      // Simulate the user speaking a phrase from the lesson keyPhrases or phrases
+  // 2. Perform speech simulation and completion when status is "listening"
+  useEffect(() => {
+    if (status === "listening" && !isSpeakingSimulated) {
       const targetPhrase = lesson?.phrases?.[0]?.phrase || "Practice phrase";
 
       const speakingTimer = setTimeout(() => {
@@ -151,7 +163,7 @@ export default function AudioLessonScreen() {
 
       return () => clearTimeout(speakingTimer);
     }
-  }, [isMicActive, isSpeakingSimulated, status, lesson, language.code, completeLesson]);
+  }, [status, isSpeakingSimulated, lesson, language.code, completeLesson]);
 
   // Handle speaker tap to repeat message
   const handlePlayAudio = () => {

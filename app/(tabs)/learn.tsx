@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert, ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -63,7 +63,7 @@ export default function LearnScreen() {
   };
 
   // Custom lesson image mapping (respective images from assets/images or unsplash placeholders)
-  const getLessonImage = (lessonId: string, title: string): any => {
+  const getLessonImage = (lessonId: string, title: string): ImageSourcePropType => {
     // Map specific lesson content to matching local assets
     if (lessonId.includes("l1")) return images.teacherAvatar;
     if (lessonId.includes("l2")) return images.mascotWelcome;
