@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useAuth, useUser } from "@clerk/expo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
+import { usePostHog } from "posthog-react-native";
 import { useAppStore } from "../../store/useAppStore";
 import { languages } from "../../data/languages";
 
@@ -12,10 +13,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const { user } = useUser();
+  const posthog = usePostHog();
   const { selectedLanguageCode, setSelectedLanguageCode } = useAppStore();
 
   const handleSignOut = async () => {
     try {
+      posthog.capture("user_signed_out");
       await signOut();
       setSelectedLanguageCode(null);
       router.replace("/onboarding");

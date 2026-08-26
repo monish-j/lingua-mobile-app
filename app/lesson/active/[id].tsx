@@ -4,11 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { usePostHog } from "posthog-react-native";
 import { lessons } from "../../../data/lessons";
 import { images } from "../../../constants/images";
 
 export default function LessonActiveScreen() {
   const router = useRouter();
+  const posthog = usePostHog();
   const { id } = useLocalSearchParams();
 
   // Find the lesson in the dataset
@@ -107,6 +109,12 @@ export default function LessonActiveScreen() {
       correct = matchedLefts.length === totalPairs;
     }
 
+    posthog.capture("lesson_answer_checked", {
+      lesson_id: lesson.id,
+      activity_index: currentIdx,
+      activity_type: currentActivity.type,
+      is_correct: correct,
+    });
     setIsCorrect(correct);
     setHasChecked(true);
 
@@ -140,12 +148,26 @@ export default function LessonActiveScreen() {
     if (currentIdx < lesson.activities.length - 1) {
       setCurrentIdx((prev) => prev + 1);
     } else {
+      posthog.capture("lesson_completed", {
+        lesson_id: lesson.id,
+        activity_count: lesson.activities.length,
+        lesson_xp: lesson.xp,
+      });
       setIsFinished(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
   };
 
   const handleFinish = () => {
+    router.replace("/(tabs)/home");
+  };
+
+  const handleExitLesson = () => {
+    posthog.capture("lesson_abandoned", {
+      lesson_id: lesson.id,
+      activity_index: currentIdx,
+      activity_count: lesson.activities.length,
+    });
     router.replace("/(tabs)/home");
   };
 
@@ -227,7 +249,7 @@ export default function LessonActiveScreen() {
       {/* Header bar */}
       <View className="flex-row items-center px-6 py-4 bg-neutral-background relative">
         <TouchableOpacity
-          onPress={() => router.replace("/(tabs)/home")}
+          onPress={handleExitLesson}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Feather name="x" size={24} color="#6B7280" />

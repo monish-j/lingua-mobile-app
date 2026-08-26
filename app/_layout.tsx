@@ -2,9 +2,15 @@ import "../global.css";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { useEffect, useRef } from "react";
+import { ClerkProvider, ClerkLoaded, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import {
+  PostHogErrorBoundary,
+  PostHogProvider,
+  usePostHog,
+} from "posthog-react-native";
+import { posthog } from "../config/posthog";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -14,6 +20,46 @@ if (!publishableKey) {
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+function PostHogUserIdentifier() {
+  const { user, isLoaded } = useUser();
+  const posthogClient = usePostHog();
+  const identifiedUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (user?.id) {
+      if (identifiedUserId.current !== user.id) {
+        const personProperties: Record<string, string> = {};
+
+        if (user.primaryEmailAddress?.emailAddress) {
+          personProperties.email = user.primaryEmailAddress.emailAddress;
+        }
+        if (user.fullName) {
+          personProperties.name = user.fullName;
+        }
+
+        posthogClient.identify(user.id, { $set: personProperties });
+        identifiedUserId.current = user.id;
+      }
+      return;
+    }
+
+    posthogClient.reset();
+    identifiedUserId.current = null;
+  }, [
+    isLoaded,
+    posthogClient,
+    user?.fullName,
+    user?.id,
+    user?.primaryEmailAddress?.emailAddress,
+  ]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -33,9 +79,10 @@ export default function RootLayout() {
     return null;
   }
 
-  return (
+  const app = (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
+        {posthog && <PostHogUserIdentifier />}
         <Stack
           screenOptions={{
             headerShown: false,
@@ -44,6 +91,14 @@ export default function RootLayout() {
         />
       </ClerkLoaded>
     </ClerkProvider>
+  );
+
+  return posthog ? (
+    <PostHogProvider client={posthog}>
+      <PostHogErrorBoundary fallback={null}>{app}</PostHogErrorBoundary>
+    </PostHogProvider>
+  ) : (
+    app
   );
 }
 
