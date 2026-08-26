@@ -7,3 +7,5 @@ This should be an audio-only experience. Do not implement video calling. Keep th
 Use assets from the assets folder via the centralized images import and keep everything consistent with the existing design system and bottom tab navigation.
 
 @prompt_material/07-audio-lesson-screen.png
+
+ 

@@ -51,8 +51,8 @@ export default function LessonDetailsScreen() {
       lesson_xp: lesson.xp,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    // Navigate to the interactive activity session runner screen
-    router.push({ pathname: "/lesson/active/[id]", params: { id: lesson.id } });
+    // Navigate to the audio-only AI teacher lesson screen
+    router.push({ pathname: "/lesson/audio/[id]", params: { id: lesson.id } });
   };
 
   return (

@@ -380,6 +380,248 @@ export const lessons: Lesson[] = [
       keyPhrases: ['Comment ça va ?', 'Ça va bien, merci', 'Au revoir !'],
     },
   },
+  {
+    id: 'fr-u1-l2',
+    unitId: 'fr-unit-1',
+    title: 'Pleased to Meet You',
+    description: 'Learn how to say pleased to meet you and check how someone is in French.',
+    xp: 20,
+    order: 2,
+    goals: ['Say pleased to meet you', 'Ask how someone is doing'],
+    vocabulary: [
+      { id: 'fr-v5', word: 'enchanté', translation: 'pleased to meet you', pronunciation: 'ohn-shahn-TAY' },
+      { id: 'fr-v6', word: 'comment', translation: 'how', pronunciation: 'koh-mahn' },
+      { id: 'fr-v7', word: 'ça va', translation: 'it goes / how are you', pronunciation: 'sah vah' },
+      { id: 'fr-v8', word: 'bien', translation: 'well', pronunciation: 'byehn' }
+    ],
+    phrases: [
+      { id: 'fr-p3', phrase: 'Enchanté, comment ça va?', translation: 'Pleased to meet you, how is it going?', pronunciation: 'ohn-shahn-TAY, koh-mahn sah vah' }
+    ],
+    activities: [
+      {
+        id: 'fr-u1-l2-a1',
+        type: 'multiple_choice',
+        question: 'Choose the correct translation for "enchanté"',
+        xpReward: 5,
+        options: ['Goodbye', 'Pleased to meet you', 'Thank you', 'How are you'],
+        correctAnswer: 'Pleased to meet you'
+      },
+      {
+        id: 'fr-u1-l2-a2',
+        type: 'matching_pairs',
+        question: 'Match the French and English words',
+        xpReward: 5,
+        pairs: [
+          { left: 'enchanté', right: 'pleased to meet you' },
+          { left: 'comment', right: 'how' },
+          { left: 'bien', right: 'well' }
+        ]
+      },
+      {
+        id: 'fr-u1-l2-a3',
+        type: 'translation',
+        question: 'Translate the sentence to English',
+        xpReward: 5,
+        sentence: 'Enchanté, comment ça va?',
+        correctTranslations: ['Pleased to meet you, how is it going?', 'Pleased to meet you how is it going'],
+        wordBank: ['Pleased', 'to', 'meet', 'you', 'how', 'is', 'it', 'going', 'hello', 'goodbye']
+      }
+    ]
+  },
+  {
+    id: 'fr-u1-l3',
+    unitId: 'fr-unit-1',
+    title: 'Numbers & Counting',
+    description: 'Learn numbers 1 to 5 in French.',
+    xp: 20,
+    order: 3,
+    goals: ['Count from 1 to 5', 'Recognize simple numbers'],
+    vocabulary: [
+      { id: 'fr-v9', word: 'un', translation: 'one', pronunciation: 'uhn' },
+      { id: 'fr-v10', word: 'deux', translation: 'two', pronunciation: 'duh' },
+      { id: 'fr-v11', word: 'trois', translation: 'three', pronunciation: 'trwah' },
+      { id: 'fr-v12', word: 'quatre', translation: 'four', pronunciation: 'katr' },
+      { id: 'fr-v13', word: 'cinq', translation: 'five', pronunciation: 'sank' }
+    ],
+    phrases: [
+      { id: 'fr-p4', phrase: 'Un, deux, trois', translation: 'One, two, three', pronunciation: 'uhn, duh, trwah' }
+    ],
+    activities: [
+      {
+        id: 'fr-u1-l3-a1',
+        type: 'multiple_choice',
+        question: 'What is the French word for "three"?',
+        xpReward: 5,
+        options: ['un', 'deux', 'trois', 'quatre'],
+        correctAnswer: 'trois'
+      },
+      {
+        id: 'fr-u1-l3-a2',
+        type: 'matching_pairs',
+        question: 'Match the numbers',
+        xpReward: 5,
+        pairs: [
+          { left: 'un', right: 'one' },
+          { left: 'deux', right: 'two' },
+          { left: 'trois', right: 'three' }
+        ]
+      },
+      {
+        id: 'fr-u1-l3-a3',
+        type: 'translation',
+        question: 'Translate to English',
+        xpReward: 5,
+        sentence: 'Un, deux, trois',
+        correctTranslations: ['One, two, three', 'one two three'],
+        wordBank: ['One', 'two', 'three', 'four', 'five', 'hello']
+      }
+    ]
+  },
+  {
+    id: 'fr-u1-l4',
+    unitId: 'fr-unit-1',
+    title: 'At the Café',
+    description: 'Learn basic vocabulary to order coffee in French.',
+    xp: 20,
+    order: 4,
+    goals: ['Order a coffee in French', 'Ask for the bill politely'],
+    vocabulary: [
+      { id: 'fr-v14', word: 'café', translation: 'coffee', pronunciation: 'kah-fay' },
+      { id: 'fr-v15', word: 's\'il vous plaît', translation: 'please', pronunciation: 'seel voo pleh' },
+      { id: 'fr-v16', word: 'l\'addition', translation: 'the bill', pronunciation: 'lah-dee-syohn' },
+      { id: 'fr-v17', word: 'croissant', translation: 'croissant', pronunciation: 'krwah-sahn' }
+    ],
+    phrases: [
+      { id: 'fr-p5', phrase: 'Un café, s\'il vous plaît', translation: 'A coffee, please', pronunciation: 'uhn kah-fay, seel voo pleh' }
+    ],
+    activities: [
+      {
+        id: 'fr-u1-l4-a1',
+        type: 'multiple_choice',
+        question: 'Choose the correct translation for "please" in French',
+        xpReward: 5,
+        options: ['bonjour', 'merci', 's\'il vous plaît', 'l\'addition'],
+        correctAnswer: 's\'il vous plaît'
+      },
+      {
+        id: 'fr-u1-l4-a2',
+        type: 'matching_pairs',
+        question: 'Match the café vocabulary',
+        xpReward: 5,
+        pairs: [
+          { left: 'café', right: 'coffee' },
+          { left: 'croissant', right: 'croissant' },
+          { left: 'l\'addition', right: 'the bill' }
+        ]
+      },
+      {
+        id: 'fr-u1-l4-a3',
+        type: 'translation',
+        question: 'Translate the sentence to English',
+        xpReward: 5,
+        sentence: 'Un café, s\'il vous plaît',
+        correctTranslations: ['A coffee, please', 'a coffee please'],
+        wordBank: ['A', 'coffee', 'please', 'the', 'bill', 'croissant', 'hello']
+      }
+    ]
+  },
+  {
+    id: 'fr-u1-l5',
+    unitId: 'fr-unit-1',
+    title: 'Asking Directions',
+    description: 'Learn how to ask where the station or hotel is.',
+    xp: 20,
+    order: 5,
+    goals: ['Ask for the station', 'Ask for the hotel'],
+    vocabulary: [
+      { id: 'fr-v18', word: 'où', translation: 'where', pronunciation: 'oo' },
+      { id: 'fr-v19', word: 'est', translation: 'is', pronunciation: 'eh' },
+      { id: 'fr-v20', word: 'la gare', translation: 'the station', pronunciation: 'lah gahr' },
+      { id: 'fr-v21', word: 'l\'hôtel', translation: 'the hotel', pronunciation: 'loh-tel' }
+    ],
+    phrases: [
+      { id: 'fr-p6', phrase: 'Où est la gare?', translation: 'Where is the station?', pronunciation: 'oo eh lah gahr' }
+    ],
+    activities: [
+      {
+        id: 'fr-u1-l5-a1',
+        type: 'multiple_choice',
+        question: 'How do you say "Where" in French?',
+        xpReward: 5,
+        options: ['comment', 'où', 'bonjour', 'est'],
+        correctAnswer: 'où'
+      },
+      {
+        id: 'fr-u1-l5-a2',
+        type: 'matching_pairs',
+        question: 'Match the words',
+        xpReward: 5,
+        pairs: [
+          { left: 'où', right: 'where' },
+          { left: 'la gare', right: 'the station' },
+          { left: 'l\'hôtel', right: 'the hotel' }
+        ]
+      },
+      {
+        id: 'fr-u1-l5-a3',
+        type: 'translation',
+        question: 'Translate to English',
+        xpReward: 5,
+        sentence: 'Où est la gare?',
+        correctTranslations: ['Where is the station?', 'where is the station'],
+        wordBank: ['Where', 'is', 'the', 'station', 'hotel', 'coffee', 'please']
+      }
+    ]
+  },
+  {
+    id: 'fr-u1-l6',
+    unitId: 'fr-unit-1',
+    title: 'Family Members',
+    description: 'Learn how to talk about parents and family.',
+    xp: 20,
+    order: 6,
+    goals: ['Identify mother and father', 'Say family in French'],
+    vocabulary: [
+      { id: 'fr-v22', word: 'la famille', translation: 'the family', pronunciation: 'lah fah-mee' },
+      { id: 'fr-v23', word: 'le père', translation: 'the father', pronunciation: 'luh pair' },
+      { id: 'fr-v24', word: 'la mère', translation: 'the mother', pronunciation: 'lah mair' },
+      { id: 'fr-v25', word: 'le frère', translation: 'the brother', pronunciation: 'luh frair' },
+      { id: 'fr-v26', word: 'la sœur', translation: 'the sister', pronunciation: 'lah sir' }
+    ],
+    phrases: [
+      { id: 'fr-p7', phrase: 'Ma mère et mon père', translation: 'My mother and my father', pronunciation: 'mah mair ay mohn pair' }
+    ],
+    activities: [
+      {
+        id: 'fr-u1-l6-a1',
+        type: 'multiple_choice',
+        question: 'What is the French word for "the mother"?',
+        xpReward: 5,
+        options: ['le père', 'la mère', 'la famille', 'le frère'],
+        correctAnswer: 'la mère'
+      },
+      {
+        id: 'fr-u1-l6-a2',
+        type: 'matching_pairs',
+        question: 'Match the family terms',
+        xpReward: 5,
+        pairs: [
+          { left: 'le père', right: 'the father' },
+          { left: 'la mère', right: 'the mother' },
+          { left: 'la famille', right: 'the family' }
+        ]
+      },
+      {
+        id: 'fr-u1-l6-a3',
+        type: 'translation',
+        question: 'Translate the sentence to English',
+        xpReward: 5,
+        sentence: 'Ma mère et mon père',
+        correctTranslations: ['My mother and my father', 'my mother and my father'],
+        wordBank: ['My', 'mother', 'and', 'father', 'brother', 'sister', 'family']
+      }
+    ]
+  },
 
   // ==========================================
   // JAPANESE LESSONS
@@ -493,6 +735,243 @@ export const lessons: Lesson[] = [
       keyVocabulary: ['こんにちは', 'ありがとう', '元気', 'はい'],
       keyPhrases: ['お元気ですか？', '元気です', 'はじめまして', 'ありがとう'],
     },
+  },
+  {
+    id: 'ja-u1-l2',
+    unitId: 'ja-unit-1',
+    title: 'Self Introduction',
+    description: 'Learn how to state your name and introduce yourself in Japanese.',
+    xp: 20,
+    order: 2,
+    goals: ['State your own name', 'Say nice to meet you'],
+    vocabulary: [
+      { id: 'ja-v5', word: '私', translation: 'I / me', pronunciation: 'watashi' },
+      { id: 'ja-v6', word: '名前', translation: 'name', pronunciation: 'namae' },
+      { id: 'ja-v7', word: 'です', translation: 'is / am / are', pronunciation: 'desu' }
+    ],
+    phrases: [
+      { id: 'ja-p3', phrase: '私の名前はケンです', translation: 'My name is Ken', pronunciation: 'watashi no namae wa ken desu' }
+    ],
+    activities: [
+      {
+        id: 'ja-u1-l2-a1',
+        type: 'multiple_choice',
+        question: 'What is the Japanese word for "name"?',
+        xpReward: 5,
+        options: ['私', '名前', 'はい', 'ありがとう'],
+        correctAnswer: '名前'
+      },
+      {
+        id: 'ja-u1-l2-a2',
+        type: 'matching_pairs',
+        question: 'Match the Japanese words',
+        xpReward: 5,
+        pairs: [
+          { left: '私', right: 'I / me' },
+          { left: '名前', right: 'name' },
+          { left: 'です', right: 'is / am / are' }
+        ]
+      },
+      {
+        id: 'ja-u1-l2-a3',
+        type: 'translation',
+        question: 'Translate the phrase to English',
+        xpReward: 5,
+        sentence: '私の名前はケンです',
+        correctTranslations: ['My name is Ken', 'my name is ken'],
+        wordBank: ['My', 'name', 'is', 'Ken', 'water', 'yes', 'no']
+      }
+    ]
+  },
+  {
+    id: 'ja-u1-l3',
+    unitId: 'ja-unit-1',
+    title: 'Numbers & Counting',
+    description: 'Learn to count from 1 to 5 in Japanese.',
+    xp: 20,
+    order: 3,
+    goals: ['Count from 1 to 5', 'Recognize Japanese number characters'],
+    vocabulary: [
+      { id: 'ja-v8', word: 'いち', translation: 'one', pronunciation: 'ichi' },
+      { id: 'ja-v9', word: 'に', translation: 'two', pronunciation: 'ni' },
+      { id: 'ja-v10', word: 'さん', translation: 'three', pronunciation: 'san' },
+      { id: 'ja-v11', word: 'よん', translation: 'four', pronunciation: 'yon' },
+      { id: 'ja-v12', word: 'ご', translation: 'five', pronunciation: 'go' }
+    ],
+    phrases: [
+      { id: 'ja-p4', phrase: 'いち、に、さん', translation: 'One, two, three', pronunciation: 'ichi, ni, san' }
+    ],
+    activities: [
+      {
+        id: 'ja-u1-l3-a1',
+        type: 'multiple_choice',
+        question: 'What is the Japanese word for "three"?',
+        xpReward: 5,
+        options: ['いち', 'に', 'さん', 'ご'],
+        correctAnswer: 'さん'
+      },
+      {
+        id: 'ja-u1-l3-a2',
+        type: 'matching_pairs',
+        question: 'Match the numbers',
+        xpReward: 5,
+        pairs: [
+          { left: 'いち', right: 'one' },
+          { left: 'に', right: 'two' },
+          { left: 'さん', right: 'three' }
+        ]
+      },
+      {
+        id: 'ja-u1-l3-a3',
+        type: 'translation',
+        question: 'Translate the numbers to English',
+        xpReward: 5,
+        sentence: 'いち、に、さん',
+        correctTranslations: ['One, two, three', 'one two three'],
+        wordBank: ['One', 'two', 'three', 'four', 'five', 'name']
+      }
+    ]
+  },
+  {
+    id: 'ja-u1-l4',
+    unitId: 'ja-unit-1',
+    title: 'At the Restaurant',
+    description: 'Learn how to order water and items in a restaurant.',
+    xp: 20,
+    order: 4,
+    goals: ['Order water', 'Ask for an item using gestures ("this")'],
+    vocabulary: [
+      { id: 'ja-v13', word: '水', translation: 'water', pronunciation: 'mizu' },
+      { id: 'ja-v14', word: 'これ', translation: 'this', pronunciation: 'kore' },
+      { id: 'ja-v15', word: 'ください', translation: 'please', pronunciation: 'kudasai' }
+    ],
+    phrases: [
+      { id: 'ja-p5', phrase: 'これ、ください', translation: 'This, please', pronunciation: 'kore, kudasai' }
+    ],
+    activities: [
+      {
+        id: 'ja-u1-l4-a1',
+        type: 'multiple_choice',
+        question: 'What is the Japanese word for "water"?',
+        xpReward: 5,
+        options: ['これ', '水', 'ください', '名前'],
+        correctAnswer: '水'
+      },
+      {
+        id: 'ja-u1-l4-a2',
+        type: 'matching_pairs',
+        question: 'Match the restaurant terms',
+        xpReward: 5,
+        pairs: [
+          { left: '水', right: 'water' },
+          { left: 'これ', right: 'this' },
+          { left: 'ください', right: 'please' }
+        ]
+      },
+      {
+        id: 'ja-u1-l4-a3',
+        type: 'translation',
+        question: 'Translate the phrase to English',
+        xpReward: 5,
+        sentence: 'これ、ください',
+        correctTranslations: ['This, please', 'this please'],
+        wordBank: ['This', 'please', 'water', 'one', 'two', 'name']
+      }
+    ]
+  },
+  {
+    id: 'ja-u1-l5',
+    unitId: 'ja-unit-1',
+    title: 'Asking Directions',
+    description: 'Learn how to ask where the toilet or station is.',
+    xp: 20,
+    order: 5,
+    goals: ['Ask where the toilet is', 'Ask where the station is'],
+    vocabulary: [
+      { id: 'ja-v16', word: 'トイレ', translation: 'toilet', pronunciation: 'toire' },
+      { id: 'ja-v17', word: 'どこ', translation: 'where', pronunciation: 'doko' },
+      { id: 'ja-v18', word: '駅', translation: 'station', pronunciation: 'eki' }
+    ],
+    phrases: [
+      { id: 'ja-p6', phrase: 'トイレはどこですか？', translation: 'Where is the toilet?', pronunciation: 'toire wa doko desu ka' }
+    ],
+    activities: [
+      {
+        id: 'ja-u1-l5-a1',
+        type: 'multiple_choice',
+        question: 'How do you say "where" in Japanese?',
+        xpReward: 5,
+        options: ['トイレ', 'どこ', '駅', 'これ'],
+        correctAnswer: 'どこ'
+      },
+      {
+        id: 'ja-u1-l5-a2',
+        type: 'matching_pairs',
+        question: 'Match the terms',
+        xpReward: 5,
+        pairs: [
+          { left: 'トイレ', right: 'toilet' },
+          { left: 'どこ', right: 'where' },
+          { left: '駅', right: 'station' }
+        ]
+      },
+      {
+        id: 'ja-u1-l5-a3',
+        type: 'translation',
+        question: 'Translate the sentence to English',
+        xpReward: 5,
+        sentence: 'トイレはどこですか？',
+        correctTranslations: ['Where is the toilet?', 'where is the toilet'],
+        wordBank: ['Where', 'is', 'the', 'toilet', 'station', 'water', 'please']
+      }
+    ]
+  },
+  {
+    id: 'ja-u1-l6',
+    unitId: 'ja-unit-1',
+    title: 'Everyday Items',
+    description: 'Learn names of common items like books and phones.',
+    xp: 20,
+    order: 6,
+    goals: ['Identify a book', 'Say "this is my book"'],
+    vocabulary: [
+      { id: 'ja-v19', word: '本', translation: 'book', pronunciation: 'hon' },
+      { id: 'ja-v20', word: '鍵', translation: 'key', pronunciation: 'kagi' },
+      { id: 'ja-v21', word: '携帯', translation: 'phone', pronunciation: 'keitai' }
+    ],
+    phrases: [
+      { id: 'ja-p7', phrase: 'これは私の本です', translation: 'This is my book', pronunciation: 'kore wa watashi no hon desu' }
+    ],
+    activities: [
+      {
+        id: 'ja-u1-l6-a1',
+        type: 'multiple_choice',
+        question: 'What does "本" mean in Japanese?',
+        xpReward: 5,
+        options: ['book', 'key', 'phone', 'bag'],
+        correctAnswer: 'book'
+      },
+      {
+        id: 'ja-u1-l6-a2',
+        type: 'matching_pairs',
+        question: 'Match the items',
+        xpReward: 5,
+        pairs: [
+          { left: '本', right: 'book' },
+          { left: '鍵', right: 'key' },
+          { left: '携帯', right: 'phone' }
+        ]
+      },
+      {
+        id: 'ja-u1-l6-a3',
+        type: 'translation',
+        question: 'Translate to English',
+        xpReward: 5,
+        sentence: 'これは私の本です',
+        correctTranslations: ['This is my book', 'this is my book'],
+        wordBank: ['This', 'is', 'my', 'book', 'key', 'phone', 'water']
+      }
+    ]
   },
 
   // ==========================================
@@ -615,5 +1094,244 @@ export const lessons: Lesson[] = [
       keyVocabulary: ['hallo', 'bitte', 'danke', 'tschüss'],
       keyPhrases: ["Wie geht's?", 'Danke, gut', 'Tschüss!'],
     },
+  },
+  {
+    id: 'de-u1-l2',
+    unitId: 'de-unit-1',
+    title: 'My Name is...',
+    description: 'Learn how to state your name and ask someone their name in German.',
+    xp: 20,
+    order: 2,
+    goals: ['State your own name', 'Ask someone their name'],
+    vocabulary: [
+      { id: 'de-v5', word: 'ich', translation: 'I', pronunciation: 'ikh' },
+      { id: 'de-v6', word: 'heiße', translation: 'am named', pronunciation: 'HY-suh' },
+      { id: 'de-v7', word: 'wie', translation: 'how', pronunciation: 'vee' },
+      { id: 'de-v8', word: 'du', translation: 'you', pronunciation: 'doo' }
+    ],
+    phrases: [
+      { id: 'de-p3', phrase: 'Ich heiße Max', translation: 'My name is Max', pronunciation: 'ikh HY-suh Max' }
+    ],
+    activities: [
+      {
+        id: 'de-u1-l2-a1',
+        type: 'multiple_choice',
+        question: 'What does "ich" mean in German?',
+        xpReward: 5,
+        options: ['you', 'I', 'hello', 'please'],
+        correctAnswer: 'I'
+      },
+      {
+        id: 'de-u1-l2-a2',
+        type: 'matching_pairs',
+        question: 'Match the German words',
+        xpReward: 5,
+        pairs: [
+          { left: 'ich', right: 'I' },
+          { left: 'wie', right: 'how' },
+          { left: 'du', right: 'you' }
+        ]
+      },
+      {
+        id: 'de-u1-l2-a3',
+        type: 'translation',
+        question: 'Translate the phrase to English',
+        xpReward: 5,
+        sentence: 'Ich heiße Max',
+        correctTranslations: ['My name is Max', 'I am named Max'],
+        wordBank: ['My', 'name', 'is', 'Max', 'hello', 'please', 'thanks']
+      }
+    ]
+  },
+  {
+    id: 'de-u1-l3',
+    unitId: 'de-unit-1',
+    title: 'Numbers & Counting',
+    description: 'Learn to count from 1 to 5 in German.',
+    xp: 20,
+    order: 3,
+    goals: ['Count from 1 to 5', 'Recognize German numbers'],
+    vocabulary: [
+      { id: 'de-v9', word: 'eins', translation: 'one', pronunciation: 'yns' },
+      { id: 'de-v10', word: 'zwei', translation: 'two', pronunciation: 'tsvy' },
+      { id: 'de-v11', word: 'drei', translation: 'three', pronunciation: 'dry' },
+      { id: 'de-v12', word: 'vier', translation: 'four', pronunciation: 'feer' },
+      { id: 'de-v13', word: 'fünf', translation: 'five', pronunciation: 'fuynf' }
+    ],
+    phrases: [
+      { id: 'de-p4', phrase: 'Eins, zwei, drei', translation: 'One, two, three', pronunciation: 'yns, tsvy, dry' }
+    ],
+    activities: [
+      {
+        id: 'de-u1-l3-a1',
+        type: 'multiple_choice',
+        question: 'What is the German word for "three"?',
+        xpReward: 5,
+        options: ['eins', 'zwei', 'drei', 'vier'],
+        correctAnswer: 'drei'
+      },
+      {
+        id: 'de-u1-l3-a2',
+        type: 'matching_pairs',
+        question: 'Match the numbers',
+        xpReward: 5,
+        pairs: [
+          { left: 'eins', right: 'one' },
+          { left: 'zwei', right: 'two' },
+          { left: 'drei', right: 'three' }
+        ]
+      },
+      {
+        id: 'de-u1-l3-a3',
+        type: 'translation',
+        question: 'Translate the numbers to English',
+        xpReward: 5,
+        sentence: 'Eins, zwei, drei',
+        correctTranslations: ['One, two, three', 'one two three'],
+        wordBank: ['One', 'two', 'three', 'four', 'five', 'name']
+      }
+    ]
+  },
+  {
+    id: 'de-u1-l4',
+    unitId: 'de-unit-1',
+    title: 'At the Café',
+    description: 'Learn basic terms to order drinks at a German café.',
+    xp: 20,
+    order: 4,
+    goals: ['Order a coffee in German', 'Order water in German'],
+    vocabulary: [
+      { id: 'de-v14', word: 'Kaffee', translation: 'coffee', pronunciation: 'KAF-ay' },
+      { id: 'de-v15', word: 'Wasser', translation: 'water', pronunciation: 'VAS-ser' },
+      { id: 'de-v16', word: 'bitte', translation: 'please', pronunciation: 'BIT-teh' }
+    ],
+    phrases: [
+      { id: 'de-p5', phrase: 'Ein Kaffee, bitte', translation: 'A coffee, please', pronunciation: 'yn KAF-ay, BIT-teh' }
+    ],
+    activities: [
+      {
+        id: 'de-u1-l4-a1',
+        type: 'multiple_choice',
+        question: 'What is the German word for "coffee"?',
+        xpReward: 5,
+        options: ['Wasser', 'Kaffee', 'bitte', 'danke'],
+        correctAnswer: 'Kaffee'
+      },
+      {
+        id: 'de-u1-l4-a2',
+        type: 'matching_pairs',
+        question: 'Match the café terms',
+        xpReward: 5,
+        pairs: [
+          { left: 'Kaffee', right: 'coffee' },
+          { left: 'Wasser', right: 'water' },
+          { left: 'bitte', right: 'please' }
+        ]
+      },
+      {
+        id: 'de-u1-l4-a3',
+        type: 'translation',
+        question: 'Translate the sentence to English',
+        xpReward: 5,
+        sentence: 'Ein Kaffee, bitte',
+        correctTranslations: ['A coffee, please', 'a coffee please'],
+        wordBank: ['A', 'coffee', 'please', 'water', 'three', 'name']
+      }
+    ]
+  },
+  {
+    id: 'de-u1-l5',
+    unitId: 'de-unit-1',
+    title: 'Directions',
+    description: 'Learn to ask where the station or hotel is in German.',
+    xp: 20,
+    order: 5,
+    goals: ['Ask where the station is', 'Ask where the hotel is'],
+    vocabulary: [
+      { id: 'de-v17', word: 'wo', translation: 'where', pronunciation: 'voh' },
+      { id: 'de-v18', word: 'ist', translation: 'is', pronunciation: 'ist' },
+      { id: 'de-v19', word: 'der Bahnhof', translation: 'the station', pronunciation: 'dair BAHN-hohf' },
+      { id: 'de-v20', word: 'das Hotel', translation: 'the hotel', pronunciation: 'das ho-TEL' }
+    ],
+    phrases: [
+      { id: 'de-p6', phrase: 'Wo ist der Bahnhof?', translation: 'Where is the station?', pronunciation: 'voh ist dair BAHN-hohf' }
+    ],
+    activities: [
+      {
+        id: 'de-u1-l5-a1',
+        type: 'multiple_choice',
+        question: 'How do you say "where" in German?',
+        xpReward: 5,
+        options: ['wo', 'ist', 'wie', 'hallo'],
+        correctAnswer: 'wo'
+      },
+      {
+        id: 'de-u1-l5-a2',
+        type: 'matching_pairs',
+        question: 'Match the terms',
+        xpReward: 5,
+        pairs: [
+          { left: 'wo', right: 'where' },
+          { left: 'der Bahnhof', right: 'the station' },
+          { left: 'das Hotel', right: 'the hotel' }
+        ]
+      },
+      {
+        id: 'de-u1-l5-a3',
+        type: 'translation',
+        question: 'Translate the sentence to English',
+        xpReward: 5,
+        sentence: 'Wo ist der Bahnhof?',
+        correctTranslations: ['Where is the station?', 'where is the station'],
+        wordBank: ['Where', 'is', 'the', 'station', 'hotel', 'coffee', 'please']
+      }
+    ]
+  },
+  {
+    id: 'de-u1-l6',
+    unitId: 'de-unit-1',
+    title: 'Common Verbs',
+    description: 'Learn basic German verbs like to drink and to eat.',
+    xp: 20,
+    order: 6,
+    goals: ['Say "I drink water"', 'Learn verbs to drink and to eat'],
+    vocabulary: [
+      { id: 'de-v21', word: 'trinken', translation: 'to drink', pronunciation: 'TRIN-ken' },
+      { id: 'de-v22', word: 'essen', translation: 'to eat', pronunciation: 'ES-sen' },
+      { id: 'de-v23', word: 'haben', translation: 'to have', pronunciation: 'HAH-ben' }
+    ],
+    phrases: [
+      { id: 'de-p7', phrase: 'Ich trinke Wasser', translation: 'I drink water', pronunciation: 'ikh TRIN-keh VAS-ser' }
+    ],
+    activities: [
+      {
+        id: 'de-u1-l6-a1',
+        type: 'multiple_choice',
+        question: 'What does "trinken" mean?',
+        xpReward: 5,
+        options: ['to eat', 'to drink', 'to have', 'to be'],
+        correctAnswer: 'to drink'
+      },
+      {
+        id: 'de-u1-l6-a2',
+        type: 'matching_pairs',
+        question: 'Match the verbs',
+        xpReward: 5,
+        pairs: [
+          { left: 'trinken', right: 'to drink' },
+          { left: 'essen', right: 'to eat' },
+          { left: 'haben', right: 'to have' }
+        ]
+      },
+      {
+        id: 'de-u1-l6-a3',
+        type: 'translation',
+        question: 'Translate to English',
+        xpReward: 5,
+        sentence: 'Ich trinke Wasser',
+        correctTranslations: ['I drink water', 'i drink water'],
+        wordBank: ['I', 'drink', 'water', 'coffee', 'please', 'station', 'is']
+      }
+    ]
   },
 ];

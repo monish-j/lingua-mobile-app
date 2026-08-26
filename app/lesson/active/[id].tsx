@@ -7,11 +7,13 @@ import * as Haptics from "expo-haptics";
 import { usePostHog } from "posthog-react-native";
 import { lessons } from "../../../data/lessons";
 import { images } from "../../../constants/images";
+import { useAppStore } from "../../../store/useAppStore";
 
 export default function LessonActiveScreen() {
   const router = useRouter();
   const posthog = usePostHog();
   const { id } = useLocalSearchParams();
+  const { completeLesson } = useAppStore();
 
   // Find the lesson in the dataset
   const lesson = lessons.find((l) => l.id === id);
@@ -173,13 +175,14 @@ export default function LessonActiveScreen() {
         activity_count: lesson.activities.length,
         lesson_xp: lesson.xp,
       });
+      completeLesson(lesson.id);
       setIsFinished(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
   };
 
   const handleFinish = () => {
-    router.replace("/(tabs)/home");
+    router.replace("/(tabs)/learn");
   };
 
   const handleExitLesson = () => {
