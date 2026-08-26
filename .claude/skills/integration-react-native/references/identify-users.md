@@ -254,8 +254,9 @@ class DeepLinkIdentityManager {
         }
     }
     private func validateHandoffToken(_ token: String) -> String? {
-        // PSEUDOCODE: Replace this with secure signature and expiration verification
-        // (e.g., verifying a JWT signature using a secret or public key).
+        // PSEUDOCODE: Replace this with secure signature and expiration verification.
+        // Local mobile verification must use an embedded public key for signature validation
+        // or be performed through a secure backend (never embed a shared signing secret).
         // If the token is invalid or expired, return nil.
         guard let payload = decodeAndVerifyToken(token), !payload.isExpired else {
             return nil
@@ -297,8 +298,9 @@ object DeepLinkIdentityManager {
         }
     }
     private fun validateHandoffToken(token: String): String? {
-        // PSEUDOCODE: Replace this with secure signature and expiration verification
-        // (e.g., verifying a JWT signature using a secret or public key).
+        // PSEUDOCODE: Replace this with secure signature and expiration verification.
+        // Local mobile verification must use an embedded public key for signature validation
+        // or be performed through a secure backend (never embed a shared signing secret).
         // If the token is invalid or expired, return null.
         val payload = decodeAndVerifyToken(token) ?: return null
         if (payload.isExpired()) {
