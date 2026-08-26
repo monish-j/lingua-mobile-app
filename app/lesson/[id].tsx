@@ -4,11 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { usePostHog } from "posthog-react-native";
 import { lessons } from "../../data/lessons";
 import { units } from "../../data/units";
 
 export default function LessonDetailsScreen() {
   const router = useRouter();
+  const posthog = usePostHog();
   const { id } = useLocalSearchParams();
 
   // Find the lesson in the dataset
@@ -43,6 +45,11 @@ export default function LessonDetailsScreen() {
   const unit = units.find((u) => u.id === lesson.unitId);
 
   const handleStart = () => {
+    posthog.capture("lesson_started", {
+      lesson_id: lesson.id,
+      unit_id: lesson.unitId,
+      lesson_xp: lesson.xp,
+    });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     // Navigate to the interactive activity session runner screen
     router.push({ pathname: "/lesson/active/[id]", params: { id: lesson.id } });

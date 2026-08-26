@@ -12,12 +12,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { usePostHog } from "posthog-react-native";
 import { languages } from "../data/languages";
 import { images } from "../constants/images";
 import { useAppStore } from "../store/useAppStore";
 
 export default function LanguageSelect() {
   const router = useRouter();
+  const posthog = usePostHog();
   const { selectedLanguageCode, setSelectedLanguageCode } = useAppStore();
   const [selectedCode, setSelectedCode] = useState<string | null>(selectedLanguageCode);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,6 +33,10 @@ export default function LanguageSelect() {
     if (selectedCode) {
       const isInitialSelection = !selectedLanguageCode;
       setSelectedLanguageCode(selectedCode);
+      posthog.capture("language_selected", {
+        language_code: selectedCode,
+        is_initial_selection: isInitialSelection,
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       
       if (isInitialSelection) {
