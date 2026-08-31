@@ -74,7 +74,7 @@ export default function LanguageSelect() {
         
         {/* Sticky Header */}
         <View className="flex-row items-center justify-center px-6 py-4 border-b border-neutral-border relative bg-neutral-background">
-          {selectedLanguageCode && (
+          {Boolean(selectedLanguageCode) ? (
             <TouchableOpacity
               onPress={() => router.back()}
               style={styles.backButton}
@@ -82,7 +82,7 @@ export default function LanguageSelect() {
             >
               <Feather name="chevron-left" size={28} color="#0D132B" />
             </TouchableOpacity>
-          )}
+          ) : null}
           <Text className="text-h3 font-poppins-bold text-neutral-text-primary">
             Choose a language
           </Text>
@@ -100,11 +100,11 @@ export default function LanguageSelect() {
               className="flex-1 font-poppins-medium text-body-medium text-neutral-text-primary"
               style={styles.textInput}
             />
-            {searchQuery.length > 0 && (
+            {searchQuery.length > 0 ? (
               <TouchableOpacity onPress={() => setSearchQuery("")}>
                 <Feather name="x" size={18} color="#6B7280" />
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         </View>
 

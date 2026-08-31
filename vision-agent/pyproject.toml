@@ -1,0 +1,20 @@
+[project]
+name = "vision-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Monish Jaiswal", email = "monishj8956@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "python-dotenv>=1.2.3",
+    "vision-agents[gemini,getstream,google,openai]>=0.6.9",
+]
+
+[project.scripts]
+vision-agent = "vision_agent:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"

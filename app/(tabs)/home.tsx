@@ -256,7 +256,7 @@ export default function HomeScreen() {
 
 
         {/* Dev Tools resetting state helper */}
-        {__DEV__ && (
+        {__DEV__ ? (
           <View className="mb-6 mt-2 border-t border-dashed border-neutral-border pt-6 items-center">
             <TouchableOpacity 
               activeOpacity={0.8}
@@ -269,7 +269,7 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
       </ScrollView>
     </SafeAreaView>

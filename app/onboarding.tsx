@@ -40,12 +40,11 @@ export default function Onboarding() {
           {/* Headline and Description */}
           <View style={styles.textContainer}>
             <Text className="text-h1 font-poppins-bold text-neutral-text-primary leading-tight">
-              Your AI language{"\n"}
-              <Text className="text-primary-purple">teacher</Text>.
+              {"Your AI language\n"}
+              <Text className="text-primary-purple">teacher.</Text>
             </Text>
             <Text className="text-body-large text-neutral-text-secondary leading-relaxed mt-1">
-              Real conversations, personalized{"\n"}
-              lessons, anytime, anywhere.
+              {"Real conversations, personalized\nlessons, anytime, anywhere."}
             </Text>
           </View>
         </View>
