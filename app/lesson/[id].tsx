@@ -68,7 +68,7 @@ export default function LessonDetailsScreen() {
         <Text className="text-h4 font-poppins-bold text-neutral-text-primary text-center">
           Lesson Details
         </Text>
-        <View className="w-6" /> {/* spacer to balance back button */}
+        <View className="w-6" />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -92,7 +92,7 @@ export default function LessonDetailsScreen() {
           </View>
           <View>
             <Text className="text-body-medium font-poppins-bold text-[#FF8A00]">
-              +{lesson.xp} XP Reward
+              {`+${lesson.xp} XP Reward`}
             </Text>
             <Text className="text-body-small text-neutral-text-secondary">
               Earn XP upon successful completion
@@ -101,13 +101,13 @@ export default function LessonDetailsScreen() {
         </View>
 
         {/* Learning Goals Section */}
-        {lesson.goals && lesson.goals.length > 0 && (
+        {Boolean(lesson.goals && lesson.goals.length > 0) ? (
           <View className="mb-6">
             <Text className="text-h4 font-poppins-bold text-neutral-text-primary mb-3">
               What you will learn
             </Text>
             <View className="gap-2.5">
-              {lesson.goals.map((goal, index) => (
+              {lesson.goals?.map((goal, index) => (
                 <View key={index} className="flex-row items-start gap-2.5">
                   <View className="bg-primary-green/10 p-1 rounded-full mt-0.5">
                     <Feather name="check" size={14} color="#21C16B" />
@@ -119,16 +119,16 @@ export default function LessonDetailsScreen() {
               ))}
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Vocabulary Preview Section */}
-        {lesson.vocabulary && lesson.vocabulary.length > 0 && (
+        {Boolean(lesson.vocabulary && lesson.vocabulary.length > 0) ? (
           <View className="mb-8">
             <Text className="text-h4 font-poppins-bold text-neutral-text-primary mb-3">
               Vocabulary preview
             </Text>
             <View className="gap-3">
-              {lesson.vocabulary.map((vocab) => (
+              {lesson.vocabulary?.map((vocab) => (
                 <View 
                   key={vocab.id} 
                   className="p-4 bg-neutral-surface rounded-2xl border border-neutral-border flex-row justify-between items-center"
@@ -137,27 +137,27 @@ export default function LessonDetailsScreen() {
                     <Text className="text-body-large font-poppins-bold text-neutral-text-primary">
                       {vocab.word}
                     </Text>
-                    {vocab.pronunciation && (
+                    {Boolean(vocab.pronunciation) ? (
                       <Text className="text-caption font-poppins-medium text-neutral-text-secondary mt-0.5">
-                        Pronunciation: /{vocab.pronunciation}/
+                        {`Pronunciation: /${vocab.pronunciation}/`}
                       </Text>
-                    )}
+                    ) : null}
                   </View>
                   <View className="items-end">
                     <Text className="text-body-medium font-poppins-semibold text-primary-purple">
                       {vocab.translation}
                     </Text>
-                    {vocab.partOfSpeech && (
+                    {Boolean(vocab.partOfSpeech) ? (
                       <Text className="text-caption font-poppins-medium text-neutral-text-secondary uppercase tracking-widest mt-0.5">
                         {vocab.partOfSpeech}
                       </Text>
-                    )}
+                    ) : null}
                   </View>
                 </View>
               ))}
             </View>
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* Sticky Start Button Container */}

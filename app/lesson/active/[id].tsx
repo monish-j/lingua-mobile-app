@@ -293,7 +293,7 @@ export default function LessonActiveScreen() {
         </Text>
 
         {/* 1. RENDER LISTENING AUDIO BUTTON */}
-        {currentActivity.type === "listening" && "textToSpeak" in currentActivity && (
+        {currentActivity.type === "listening" && "textToSpeak" in currentActivity ? (
           <View className="items-center mb-6">
             <TouchableOpacity 
               onPress={() => {
@@ -308,10 +308,10 @@ export default function LessonActiveScreen() {
               Tap to hear active audio hint
             </Text>
           </View>
-        )}
+        ) : null}
 
         {/* 2. RENDER MULTIPLE CHOICE / FILL IN BLANK / LISTENING OPTIONS */}
-        {optionsList.length > 0 && (
+        {optionsList.length > 0 ? (
           <View className="gap-3">
             {optionsList.map((option, idx) => {
               const isSelected = selectedOption === option;
@@ -343,16 +343,16 @@ export default function LessonActiveScreen() {
                   <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${
                     isSelected ? "border-primary-purple" : "border-neutral-border"
                   }`}>
-                    {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-primary-purple" />}
+                    {isSelected ? <View className="w-2.5 h-2.5 rounded-full bg-primary-purple" /> : null}
                   </View>
                 </TouchableOpacity>
               );
             })}
           </View>
-        )}
+        ) : null}
 
         {/* 3. RENDER TRANSLATION COMPONENT */}
-        {currentActivity.type === "translation" && "wordBank" in currentActivity && (
+        {currentActivity.type === "translation" && "wordBank" in currentActivity ? (
           <View className="gap-6">
             <View className="p-4 bg-neutral-surface border border-neutral-border rounded-2xl flex-row items-center gap-3">
               <Feather name="message-square" size={20} color="#6C4EF5" />
@@ -368,19 +368,17 @@ export default function LessonActiveScreen() {
                   Tap words from the bank to assemble your translation...
                 </Text>
               ) : (
-                selectedWords.map((word, idx) => (
+                selectedWords.map((word, index) => (
                   <TouchableOpacity
-                    key={idx}
+                    key={`${word}-${index}`}
                     disabled={hasChecked}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      setSelectedWords(prev => prev.filter((_, i) => i !== idx));
-                    }}
-                    className="px-4 py-2 bg-primary-purple/10 border border-primary-purple/20 rounded-xl"
+                    onPress={() => setSelectedWords(prev => prev.filter((_, i) => i !== index))}
+                    className="px-3.5 py-2 bg-primary-purple/10 border border-primary-purple rounded-xl flex-row items-center gap-1.5"
                   >
                     <Text className="text-body-medium font-poppins-semibold text-primary-purple">
                       {word}
                     </Text>
+                    {!hasChecked ? <Feather name="x" size={14} color="#6C4EF5" /> : null}
                   </TouchableOpacity>
                 ))
               )}
@@ -417,10 +415,10 @@ export default function LessonActiveScreen() {
               })}
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* 4. RENDER SPEAKING COMPONENT */}
-        {currentActivity.type === "speaking" && "textToSpeak" in currentActivity && (
+        {currentActivity.type === "speaking" && "textToSpeak" in currentActivity ? (
           <View className="items-center gap-6 py-6">
             <View className="items-center p-6 bg-neutral-surface border border-neutral-border rounded-2xl w-full">
               <Text className="text-h2 font-poppins-bold text-primary-purple text-center">
@@ -473,10 +471,10 @@ export default function LessonActiveScreen() {
               }
             </Text>
           </View>
-        )}
+        ) : null}
 
         {/* 5. RENDER MATCHING PAIRS COMPONENT */}
-        {currentActivity.type === "matching_pairs" && (
+        {currentActivity.type === "matching_pairs" ? (
           <View className="gap-4">
             <Text className="text-body-small text-neutral-text-secondary text-center mb-2">
               Select a word on the left and its match on the right!
@@ -604,7 +602,7 @@ export default function LessonActiveScreen() {
               );
             })()}
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* Sticky Bottom Action Panel */}

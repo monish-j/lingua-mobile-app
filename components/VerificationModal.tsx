@@ -213,11 +213,11 @@ export default function VerificationModal({
               </Pressable>
 
               {/* Error feedback message */}
-              {error && (
+              {error ? (
                 <Text className="text-body-small text-semantic-error mt-2 font-poppins-semibold text-center">
                   {error}
                 </Text>
-              )}
+              ) : null}
 
               {/* Hidden text input */}
               <TextInput

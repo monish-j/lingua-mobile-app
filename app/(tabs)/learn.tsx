@@ -121,7 +121,7 @@ export default function LearnScreen() {
       </View>
 
       {/* Horizontal Unit Selector for multi-unit languages */}
-      {activeUnits.length > 1 && (
+      {activeUnits.length > 1 ? (
         <View className="border-b border-neutral-border py-3 bg-white">
           <ScrollView
             horizontal
@@ -152,19 +152,19 @@ export default function LearnScreen() {
                   >
                     Unit {u.order}
                   </Text>
-                  {isUnitCompleted && (
+                  {isUnitCompleted ? (
                     <Feather
                       name="check-circle"
                       size={12}
                       color={isSelected ? "#FFFFFF" : "#21C16B"}
                     />
-                  )}
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
-      )}
+      ) : null}
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
@@ -280,7 +280,7 @@ export default function LearnScreen() {
                       <View className="flex-row items-center gap-1 bg-primary-purple/15 self-start px-3 py-1.5 rounded-full">
                         <Feather name="zap" size={12} color="#6C4EF5" />
                         <Text className="text-caption font-poppins-bold text-primary-purple">
-                          +{lesson.xp} XP Reward
+                          {`+${lesson.xp} XP Reward`}
                         </Text>
                       </View>
                     </View>

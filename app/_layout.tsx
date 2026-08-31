@@ -82,7 +82,7 @@ export default function RootLayout() {
   const app = (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
-        {posthog && <PostHogUserIdentifier />}
+        {posthog ? <PostHogUserIdentifier /> : null}
         <Stack
           screenOptions={{
             headerShown: false,
