@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { usePostHog } from "posthog-react-native";
 import { lessons } from "../../data/lessons";
 import { units } from "../../data/units";
+import { languages } from "../../data/languages";
 
 export default function LessonDetailsScreen() {
   const router = useRouter();
@@ -45,10 +46,12 @@ export default function LessonDetailsScreen() {
   const unit = units.find((u) => u.id === lesson.unitId);
 
   const handleStart = () => {
+    const language =
+      languages.find((l) => l.code === unit?.languageCode) || languages[0];
     posthog.capture("lesson_started", {
       lesson_id: lesson.id,
-      unit_id: lesson.unitId,
-      lesson_xp: lesson.xp,
+      language: language.name,
+      lesson_number: lesson.order,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     // Navigate to the audio-only AI teacher lesson screen

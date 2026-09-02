@@ -31,11 +31,12 @@ export default function LanguageSelect() {
 
   const handleConfirm = () => {
     if (selectedCode) {
+      const selectedLang = languages.find((l) => l.code === selectedCode);
       const isInitialSelection = !selectedLanguageCode;
       setSelectedLanguageCode(selectedCode);
       posthog.capture("language_selected", {
         language_code: selectedCode,
-        is_initial_selection: isInitialSelection,
+        language_name: selectedLang ? selectedLang.name : selectedCode,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       

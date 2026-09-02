@@ -1,10 +1,14 @@
+import asyncio
 import os
+import time
 from pathlib import Path
+from typing import Any, Optional
 from dotenv import load_dotenv
 
 from vision_agents.core import Agent, AgentLauncher, Runner, User
 from vision_agents.core.instructions import Instructions
 from vision_agents.plugins import getstream, openai, gemini
+from lessons_data import get_lesson_context
 
 # Load environment variables from local .env or parent directory .env
 env_path = Path(__file__).resolve().parent / ".env"
@@ -31,11 +35,125 @@ Core Persona & Rules:
 """
 
 
+class CaptionedRealtime(gemini.Realtime):
+    """Subclass of gemini.Realtime that broadcasts realtime live captions and speech turns to the Stream call."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.agent_ref: Optional[Agent] = None
+        self._user_accumulated = ""
+        self._agent_accumulated = ""
+
+    def _broadcast_custom_event(self, data: dict[str, Any]) -> None:
+        if not self.agent_ref:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._safe_send_custom_event(data))
+        except RuntimeError:
+            pass
+
+    async def _safe_send_custom_event(self, data: dict[str, Any]) -> None:
+        if not self.agent_ref:
+            return
+        try:
+            await self.agent_ref.send_custom_event(data)
+        except Exception:
+            # Drop silently if call connection is not ready or is closing
+            pass
+
+    def _emit_user_speech_transcription(self, text: str, *, mode: Any) -> None:
+        super()._emit_user_speech_transcription(text, mode=mode)
+        mode_str = str(mode) if not isinstance(mode, str) else mode
+        if mode_str == "delta":
+            self._user_accumulated += text
+        else:
+            self._user_accumulated = text or self._user_accumulated
+
+        full_text = self._user_accumulated.strip()
+        self._broadcast_custom_event({
+            "type": "caption",
+            "speaker": "user",
+            "speaker_name": "Learner",
+            "text": full_text,
+            "delta": text,
+            "mode": mode_str,
+            "timestamp": int(time.time() * 1000),
+        })
+
+    def _emit_agent_speech_transcription(self, text: str, *, mode: Any) -> None:
+        super()._emit_agent_speech_transcription(text, mode=mode)
+        mode_str = str(mode) if not isinstance(mode, str) else mode
+        if mode_str == "delta":
+            self._agent_accumulated += text
+        else:
+            self._agent_accumulated = text or self._agent_accumulated
+
+        full_text = self._agent_accumulated.strip()
+        self._broadcast_custom_event({
+            "type": "caption",
+            "speaker": "teacher",
+            "speaker_name": "AI Teacher",
+            "text": full_text,
+            "delta": text,
+            "mode": mode_str,
+            "timestamp": int(time.time() * 1000),
+        })
+
+    def _emit_user_speech_started(self) -> None:
+        super()._emit_user_speech_started()
+        self._user_accumulated = ""
+        self._broadcast_custom_event({
+            "type": "turn",
+            "speaker": "user",
+            "state": "started",
+            "timestamp": int(time.time() * 1000),
+        })
+
+    def _emit_user_speech_ended(self) -> None:
+        if hasattr(super(), "_emit_user_speech_ended"):
+            getattr(super(), "_emit_user_speech_ended")()
+        final_text = self._user_accumulated.strip()
+        self._broadcast_custom_event({
+            "type": "turn",
+            "speaker": "user",
+            "state": "ended",
+            "final_text": final_text,
+            "timestamp": int(time.time() * 1000),
+        })
+        self._user_accumulated = ""
+
+    def _emit_agent_speech_started(self, response_id: Optional[str] = None) -> None:
+        super()._emit_agent_speech_started(response_id=response_id)
+        self._agent_accumulated = ""
+        self._broadcast_custom_event({
+            "type": "turn",
+            "speaker": "teacher",
+            "state": "started",
+            "timestamp": int(time.time() * 1000),
+        })
+
+    def _emit_agent_speech_ended(
+        self, response_id: Optional[str] = None, interrupted: bool = False
+    ) -> None:
+        super()._emit_agent_speech_ended(response_id=response_id, interrupted=interrupted)
+        final_text = self._agent_accumulated.strip()
+        self._broadcast_custom_event({
+            "type": "turn",
+            "speaker": "teacher",
+            "state": "ended",
+            "final_text": final_text,
+            "interrupted": interrupted,
+            "timestamp": int(time.time() * 1000),
+        })
+        self._agent_accumulated = ""
+
+
 async def create_agent(**kwargs) -> Agent:
     """Factory function to instantiate the AI Language Teacher Agent."""
     gemini_key = os.getenv("GEMINI_API_KEY")
 
-    llm = gemini.Realtime(
+    llm = CaptionedRealtime(
         api_key=gemini_key,
     )
 
@@ -50,10 +168,11 @@ async def create_agent(**kwargs) -> Agent:
     )
 
 
-from lessons_data import get_lesson_context
-
 async def join_call(agent: Agent, call_type: str, call_id: str) -> None:
     """Lifecycle handler for joining and finishing a call."""
+    if isinstance(agent.llm, CaptionedRealtime):
+        agent.llm.agent_ref = agent
+
     call = await agent.create_call(call_type=call_type, call_id=call_id)
 
     # Deterministically resolve lesson metadata from call_id
