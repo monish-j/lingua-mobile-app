@@ -11,6 +11,7 @@ import {
   usePostHog,
 } from "posthog-react-native";
 import { posthog } from "../config/posthog";
+import { useAppStore } from "../store/useAppStore";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -24,7 +25,9 @@ SplashScreen.preventAutoHideAsync();
 function PostHogUserIdentifier() {
   const { user, isLoaded } = useUser();
   const posthogClient = usePostHog();
+  const { selectedLanguageCode } = useAppStore();
   const identifiedUserId = useRef<string | null>(null);
+  const lastIdentifiedLanguage = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -33,7 +36,9 @@ function PostHogUserIdentifier() {
 
     if (user?.id) {
       if (identifiedUserId.current !== user.id) {
-        const personProperties: Record<string, string> = {};
+        const personProperties: Record<string, string | null> = {
+          preferred_language: selectedLanguageCode ?? null,
+        };
 
         if (user.primaryEmailAddress?.emailAddress) {
           personProperties.email = user.primaryEmailAddress.emailAddress;
@@ -42,20 +47,42 @@ function PostHogUserIdentifier() {
           personProperties.name = user.fullName;
         }
 
-        posthogClient.identify(user.id, { $set: personProperties });
+        const signupDate = user.createdAt
+          ? new Date(user.createdAt).toISOString()
+          : new Date().toISOString();
+
+        posthogClient.identify(user.id, {
+          $set: personProperties,
+          $set_once: {
+            signup_date: signupDate,
+          },
+        });
         identifiedUserId.current = user.id;
+        lastIdentifiedLanguage.current = selectedLanguageCode;
+      } else if (lastIdentifiedLanguage.current !== selectedLanguageCode) {
+        posthogClient.identify(user.id, {
+          $set: {
+            preferred_language: selectedLanguageCode ?? null,
+          },
+        });
+        lastIdentifiedLanguage.current = selectedLanguageCode;
       }
       return;
     }
 
-    posthogClient.reset();
-    identifiedUserId.current = null;
+    if (identifiedUserId.current) {
+      posthogClient.reset();
+      identifiedUserId.current = null;
+      lastIdentifiedLanguage.current = null;
+    }
   }, [
     isLoaded,
     posthogClient,
+    user?.createdAt,
     user?.fullName,
     user?.id,
     user?.primaryEmailAddress?.emailAddress,
+    selectedLanguageCode,
   ]);
 
   return null;

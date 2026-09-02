@@ -6,6 +6,8 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { usePostHog } from "posthog-react-native";
 import { lessons } from "../../../data/lessons";
+import { units } from "../../../data/units";
+import { languages } from "../../../data/languages";
 import { images } from "../../../constants/images";
 import { useAppStore } from "../../../store/useAppStore";
 
@@ -43,23 +45,52 @@ export default function LessonActiveScreen() {
   const [errorRight, setErrorRight] = useState<string | null>(null);
 
   const navigation = useNavigation();
-  const hasAbandonedCaptured = useRef(false);
-
-  const captureAbandonment = React.useCallback(() => {
-    if (!lesson || isFinished || hasAbandonedCaptured.current) return;
-    hasAbandonedCaptured.current = true;
-    posthog.capture("lesson_abandoned", {
-      lesson_id: lesson.id,
-      activity_index: currentIdx,
-      activity_count: lesson.activities.length,
-    });
-  }, [isFinished, lesson, currentIdx, posthog]);
+  const lessonStartTimeRef = useRef<number>(Date.now());
+  const currentIdxRef = useRef<number>(0);
+  const isFinishedRef = useRef<boolean>(false);
+  const hasAbandonedCaptured = useRef<boolean>(false);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+    currentIdxRef.current = currentIdx;
+  }, [currentIdx]);
+
+  // Track lesson start event on mount
+  useEffect(() => {
+    if (lesson) {
+      const unit = units.find((u) => u.id === lesson.unitId);
+      const lang =
+        languages.find((l) => l.code === unit?.languageCode) || languages[0];
+      posthog.capture("lesson_started", {
+        lesson_id: lesson.id,
+        language: lang.name,
+        lesson_number: lesson.order,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const captureAbandonment = React.useCallback(() => {
+    if (!lesson || isFinishedRef.current || hasAbandonedCaptured.current) return;
+    hasAbandonedCaptured.current = true;
+    const timeIntoLessonSeconds = Math.max(
+      0,
+      Math.floor((Date.now() - lessonStartTimeRef.current) / 1000)
+    );
+    posthog.capture("lesson_abandoned", {
+      lesson_id: lesson.id,
+      time_into_lesson_seconds: timeIntoLessonSeconds,
+      last_question_index: currentIdxRef.current,
+    });
+  }, [lesson, posthog]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", () => {
       captureAbandonment();
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      captureAbandonment();
+    };
   }, [navigation, captureAbandonment]);
 
   // Unmount cleanup for simulated recording timer
@@ -170,6 +201,7 @@ export default function LessonActiveScreen() {
     if (currentIdx < lesson.activities.length - 1) {
       setCurrentIdx((prev) => prev + 1);
     } else {
+      isFinishedRef.current = true;
       posthog.capture("lesson_completed", {
         lesson_id: lesson.id,
         activity_count: lesson.activities.length,
