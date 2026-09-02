@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  NativeModules,
+  Platform,
+  PermissionsAndroid,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -34,7 +35,7 @@ import {
   createStreamCallSession,
 } from "../../../lib/stream";
 
-const isWebRTCAvailable = Boolean(NativeModules.WebRTCModule);
+const isWebRTCAvailable = Platform.OS !== "web";
 
 export default function AudioLessonScreen() {
   const router = useRouter();
@@ -83,9 +84,8 @@ export default function AudioLessonScreen() {
   const [status, setStatus] = useState<
     "connecting" | "online" | "listening" | "responded"
   >("connecting");
-  const [isCameraOn, setIsCameraOn] = useState(false); // Audio-only by default
-  const [isMicActive, setIsMicActive] = useState(true);
-  const [showSubtitles, setShowSubtitles] = useState(true);
+  const [isMicActive, setIsMicActive] = useState(false); // Muted by default for Push-to-Talk (no echo)
+  const [isHoldingToTalk, setIsHoldingToTalk] = useState(false);
   const [teacherMessage, setTeacherMessage] = useState(
     teacherPrompt.welcomeMessage
   );
@@ -106,6 +106,8 @@ export default function AudioLessonScreen() {
   // Animations
   const dotScale = useRef(new Animated.Value(1)).current;
   const bubbleOpacity = useRef(new Animated.Value(0)).current;
+  const ringScale = useRef(new Animated.Value(1)).current;
+  const ringOpacity = useRef(new Animated.Value(0)).current;
 
   // Stream User configuration
   const streamUser = useMemo(() => {
@@ -160,7 +162,7 @@ export default function AudioLessonScreen() {
     return () => animation.stop();
   }, [streamState, dotScale]);
 
-  // Connect & join Stream audio call
+  // Connect & join Stream audio call (Starts in Push-to-Talk mode with mic closed)
   useEffect(() => {
     if (!lesson) return;
     const currentLesson = lesson;
@@ -180,6 +182,10 @@ export default function AudioLessonScreen() {
           lessonTitle: activeLesson.title,
           languageCode: language.code,
           languageName: language.name,
+          aiTeacherPrompt: (activeLesson as any).aiTeacherPrompt,
+          vocabulary: activeLesson.vocabulary,
+          phrases: activeLesson.phrases,
+          goals: activeLesson.goals,
         }).catch((err) => {
           console.warn("[Stream API] Server call session notice:", err?.message || err);
         });
@@ -188,6 +194,28 @@ export default function AudioLessonScreen() {
 
         // 2. If WebRTC native module is available, connect live Stream call
         if (isWebRTCAvailable && streamClient) {
+          // Request Android microphone runtime permission
+          if (Platform.OS === "android") {
+            try {
+              const hasPermission = await PermissionsAndroid.check(
+                PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+              );
+              if (!hasPermission) {
+                await PermissionsAndroid.request(
+                  PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                  {
+                    title: "Microphone Access",
+                    message:
+                      "Duolingo Clone needs microphone access so you can practice speaking with your AI teacher.",
+                    buttonPositive: "Allow",
+                  }
+                );
+              }
+            } catch (permErr) {
+              console.warn("[Stream Audio] Permission request notice:", permErr);
+            }
+          }
+
           const call = streamClient.call("default", callId, {
             reuseInstance: true,
           });
@@ -199,7 +227,7 @@ export default function AudioLessonScreen() {
 
           if (isCancelled) return;
 
-          // 3. Audio-only configuration: disable camera and activate mic
+          // 3. Audio configuration: disable camera and activate microphone for live WebRTC communication
           await call.camera.disable().catch(() => {});
           await call.microphone.enable().catch(() => {});
         }
@@ -250,6 +278,24 @@ export default function AudioLessonScreen() {
     streamUser,
   ]);
 
+  // Central Microphone Toggle (Continuous Live Speech by Default)
+  const handleToggleMic = async () => {
+    if (streamState !== "joined") return;
+    const nextState = !isMicActive;
+    setIsMicActive(nextState);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+
+    if (streamCall) {
+      if (nextState) {
+        await streamCall.microphone.enable().catch(() => {});
+        setStatus("online");
+      } else {
+        await streamCall.microphone.disable().catch(() => {});
+        setStatus("online");
+      }
+    }
+  };
+
   // Transition status to "listening" when mic is unmuted
   useEffect(() => {
     if (isMicActive && !isSpeakingSimulated && status === "online") {
@@ -258,9 +304,9 @@ export default function AudioLessonScreen() {
     }
   }, [isMicActive, isSpeakingSimulated, status]);
 
-  // Speech practice simulation and feedback
+  // Speech practice simulation fallback (ONLY when WebRTC is not available, e.g. web/Expo Go)
   useEffect(() => {
-    if (status === "listening" && !isSpeakingSimulated) {
+    if (!isWebRTCAvailable && status === "listening" && !isSpeakingSimulated) {
       const targetPhrase =
         lesson?.phrases?.[0]?.phrase ||
         lesson?.vocabulary?.[0]?.word ||
@@ -311,42 +357,7 @@ export default function AudioLessonScreen() {
 
       return () => clearTimeout(speakingTimer);
     }
-  }, [status, isSpeakingSimulated, lesson, language.code, completeLesson]);
-
-  // Handle Toggle Microphone on Stream Call
-  const handleToggleMic = async () => {
-    if (streamState !== "joined") return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-
-    try {
-      if (streamCall) {
-        await streamCall.microphone.toggle();
-        const nextMicState = !isMicActive;
-        setIsMicActive(nextMicState);
-        if (nextMicState && status !== "responded") {
-          setStatus("listening");
-        }
-      } else {
-        setIsMicActive((prev) => !prev);
-      }
-    } catch (err) {
-      console.error("[Stream Audio] Error toggling microphone:", err);
-    }
-  };
-
-  // Handle Toggle Camera on Stream Call
-  const handleToggleCamera = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    try {
-      if (streamCall) {
-        await streamCall.camera.toggle();
-      }
-      setIsCameraOn((prev) => !prev);
-    } catch (err) {
-      console.warn("[Stream Audio] Camera toggle note:", err);
-      setIsCameraOn((prev) => !prev);
-    }
-  };
+  }, [isWebRTCAvailable, status, isSpeakingSimulated, lesson, language.code, completeLesson]);
 
   // Handle Audio Replay
   const handlePlayAudio = () => {
@@ -456,11 +467,11 @@ export default function AudioLessonScreen() {
       dotBg: "bg-slate-400",
     },
     joined: {
-      label: !isMicActive
-        ? `Muted • ${language.name}`
+      label: isHoldingToTalk
+        ? `Speaking • ${language.name}`
         : `Live Audio • ${language.name}`,
-      color: !isMicActive ? "#FF8A00" : "#22C55E",
-      dotBg: !isMicActive ? "bg-amber-500" : "bg-green-500",
+      color: isHoldingToTalk ? "#8B5CF6" : "#22C55E",
+      dotBg: isHoldingToTalk ? "bg-violet-500" : "bg-green-500",
     },
   };
 
@@ -468,12 +479,12 @@ export default function AudioLessonScreen() {
 
   const content = (
     <SafeAreaView style={styles.safeArea}>
-      {/* 1. HEADER COMPONENT */}
+      {/* 1. HEADER COMPONENT WITH END CALL ON TOP RIGHT */}
       <View className="flex-row items-center justify-between px-5 py-3 border-b border-neutral-border bg-white">
-        <View className="flex-row items-center flex-1">
+        <View className="flex-row items-center flex-1 mr-2">
           <TouchableOpacity
             onPress={handleEndCall}
-            className="p-1 mr-3"
+            className="p-1 mr-2.5"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Feather name="chevron-left" size={24} color="#1E293B" />
@@ -493,7 +504,7 @@ export default function AudioLessonScreen() {
                   transform: [
                     {
                       scale:
-                        streamState === "joined" && isMicActive
+                        streamState === "joined" && isHoldingToTalk
                           ? dotScale
                           : 1,
                     },
@@ -507,22 +518,7 @@ export default function AudioLessonScreen() {
           </View>
         </View>
 
-        <View className="flex-row items-center gap-2.5">
-          {/* Audio call active icon */}
-          <View
-            className={`p-2 rounded-xl border ${
-              streamState === "joined"
-                ? "bg-green-50 border-green-200"
-                : "bg-neutral-surface border-neutral-border"
-            }`}
-          >
-            <Feather
-              name="phone"
-              size={15}
-              color={streamState === "joined" ? "#16A34A" : "#6C4EF5"}
-            />
-          </View>
-
+        <View className="flex-row items-center gap-2">
           {/* XP pill */}
           <View className="bg-[#FFF4E6] border border-[#FFE0B2] px-3 py-1.5 rounded-full flex-row items-center gap-1">
             <Feather name="zap" size={13} color="#FF8A00" />
@@ -531,19 +527,17 @@ export default function AudioLessonScreen() {
             </Text>
           </View>
 
-          {/* User Info Avatar */}
-          {streamUser.image ? (
-            <Image
-              source={{ uri: streamUser.image }}
-              className="w-8 h-8 rounded-full border border-neutral-border bg-slate-200"
-            />
-          ) : (
-            <View className="w-8 h-8 rounded-full bg-violet-100 items-center justify-center border border-violet-200">
-              <Text className="text-caption font-poppins-bold text-primary-purple">
-                {streamUser.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
+          {/* End Call Button on Top Right */}
+          <TouchableOpacity
+            onPress={handleEndCall}
+            className="bg-red-50 border border-red-200 px-3 py-1.5 rounded-full flex-row items-center gap-1.5 active:bg-red-100"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="phone-off" size={13} color="#EF4444" />
+            <Text className="text-caption font-poppins-bold text-red-600">
+              End
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -567,85 +561,71 @@ export default function AudioLessonScreen() {
             <View
               className={`w-2 h-2 rounded-full ${
                 streamState === "joined"
-                  ? isMicActive
-                    ? "bg-green-400"
-                    : "bg-amber-400"
+                  ? isHoldingToTalk
+                    ? "bg-violet-400"
+                    : "bg-green-400"
                   : streamState === "error"
                   ? "bg-red-400"
                   : "bg-amber-400"
               }`}
             />
-            <Text className="text-[11px] font-poppins-bold text-white tracking-wide">
+            <Text className="text-[10px] font-poppins-bold text-white uppercase tracking-wider">
               {streamState === "joined"
-                ? isMicActive
-                  ? "STREAM AUDIO LIVE"
-                  : "STREAM MUTED"
+                ? isHoldingToTalk
+                  ? "SPEAKING LIVE"
+                  : "STREAM AUDIO LIVE"
                 : streamState === "error"
-                ? "STREAM OFFLINE"
+                ? "CONNECTION FAILED"
                 : "CONNECTING TO STREAM"}
             </Text>
           </View>
 
-          {/* Main Mascot Illustration */}
-          <View className="absolute inset-x-0 top-6 items-center">
+          {/* Mascot / Avatar Area */}
+          <View className="items-center justify-center pt-8 pb-4">
             <Image
               source={images.mascotWelcome}
-              className="w-48 h-48"
+              className="w-40 h-40"
               resizeMode="contain"
             />
           </View>
 
-          {/* Error Banner overlay if connection failed */}
-          {streamState === "error" ? (
-            <View className="absolute inset-0 bg-black/75 items-center justify-center p-6 z-20">
-              <Feather name="alert-triangle" size={36} color="#EF4444" />
-              <Text className="text-body-medium font-poppins-bold text-white text-center mt-3 mb-1">
-                Audio Call Connection Failed
-              </Text>
-              <Text className="text-caption font-poppins-medium text-slate-300 text-center mb-4">
-                {errorMessage || "Check your internet connection or credentials."}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setRetryCounter((c) => c + 1)}
-                className="bg-primary-purple px-5 py-2.5 rounded-full flex-row items-center gap-2"
-              >
-                <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-                <Text className="text-caption font-poppins-bold text-white">
-                  Retry Call
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {/* 3. TEACHER RESPONSE BUBBLE */}
-          {streamState !== "error" ? (
-            <Animated.View
-              style={[styles.bubbleContainer, { opacity: bubbleOpacity }]}
-              className="absolute bottom-4 left-4 right-4 bg-white rounded-2xl p-4 shadow-lg border border-slate-100"
-            >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1 mr-3">
-                  <Text className="text-body-medium font-poppins-bold text-neutral-text-primary">
+          {/* 3. TEACHER DIALOGUE / SUBTITLE BUBBLE */}
+          <Animated.View
+            style={[
+              styles.bubbleContainer,
+              {
+                position: "absolute",
+                opacity: bubbleOpacity,
+              },
+            ]}
+          >
+            <View className="bg-white/95 rounded-2xl p-4 shadow-lg border border-white/40">
+              <View className="flex-row items-start justify-between mb-1">
+                <View className="flex-1 mr-2">
+                  <Text className="text-body-large font-poppins-bold text-neutral-text-primary leading-snug">
                     {teacherMessage}
                   </Text>
-                  {showSubtitles ? (
-                    <Text className="text-caption font-poppins-medium text-neutral-text-secondary mt-1">
+                  {Boolean(teacherTranslation) ? (
+                    <Text className="text-body-small font-poppins-medium text-neutral-text-secondary mt-1">
                       {teacherTranslation}
                     </Text>
                   ) : null}
                 </View>
-                <TouchableOpacity
-                  onPress={handlePlayAudio}
-                  className="w-10 h-10 rounded-full bg-violet-100 items-center justify-center active:bg-violet-200"
-                >
-                  <Feather name="volume-2" size={20} color="#6C4EF5" />
-                </TouchableOpacity>
+
+                {/* Speaker icon indicator */}
+                <View className="p-2 rounded-full bg-violet-50 self-start">
+                  <Feather
+                    name="volume-2"
+                    size={16}
+                    color="#6C4EF5"
+                  />
+                </View>
               </View>
-            </Animated.View>
-          ) : null}
+            </View>
+          </Animated.View>
         </View>
 
-        {/* Dynamic Speech / Call Status Prompt */}
+        {/* Dynamic Status Banner */}
         <View className="items-center mt-3 px-6 h-8 justify-center">
           {streamState === "connecting" ? (
             <View className="flex-row items-center gap-2 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
@@ -656,130 +636,67 @@ export default function AudioLessonScreen() {
             </View>
           ) : null}
 
-          {streamState === "joined" && !isMicActive ? (
-            <View className="flex-row items-center bg-amber-100 px-4 py-1 rounded-full gap-1.5 border border-amber-300">
-              <Ionicons name="mic-off" size={13} color="#B45309" />
-              <Text className="text-caption font-poppins-bold text-amber-800">
-                Microphone is Muted • Tap Mic to Speak
-              </Text>
-            </View>
-          ) : null}
-
-          {streamState === "joined" && isMicActive && status === "listening" ? (
-            <View className="flex-row items-center bg-violet-100 px-4 py-1 rounded-full gap-1.5 border border-violet-200">
-              <View className="w-2 h-2 rounded-full bg-violet-600 animate-pulse" />
-              <Text className="text-caption font-poppins-bold text-violet-700 text-center">
-                Listening on Stream... Say: &quot;
-                {lesson?.phrases?.[0]?.phrase || "Hello"}
-                &quot;
-              </Text>
-            </View>
-          ) : null}
-
-          {streamState === "joined" &&
-          isMicActive &&
-          status === "online" &&
-          !isSpeakingSimulated ? (
-            <Text className="text-caption font-poppins-bold text-neutral-text-secondary bg-white px-3 py-1 rounded-full border border-neutral-border shadow-xs">
-              🎙️ Speak into microphone to respond
-            </Text>
-          ) : null}
-
-          {status === "responded" ? (
-            <View className="bg-green-50 border border-green-200 px-4 py-1 rounded-full flex-row items-center gap-1.5">
-              <Feather name="check-circle" size={13} color="#16A34A" />
+          {streamState === "joined" && isMicActive ? (
+            <View className="flex-row items-center bg-green-50 px-4 py-1 rounded-full gap-1.5 border border-green-200 shadow-xs">
+              <View className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <Text className="text-caption font-poppins-bold text-green-700">
-                Lesson completed successfully!
+                🎙️ Mic Active • Teacher is listening to you
+              </Text>
+            </View>
+          ) : null}
+
+          {streamState === "joined" && !isMicActive ? (
+            <View className="flex-row items-center bg-amber-50 px-4 py-1 rounded-full gap-1.5 border border-amber-200 shadow-xs">
+              <Ionicons name="mic-off" size={13} color="#D97706" />
+              <Text className="text-caption font-poppins-semibold text-amber-800">
+                Microphone Muted • Tap button to speak
               </Text>
             </View>
           ) : null}
         </View>
 
-        {/* 4. AUDIO LESSON CONTROLS */}
-        <View className="flex-row justify-around items-center px-6 py-4 mt-2">
-          {/* Camera Button (Audio-only lesson toggle) */}
-          <View className="items-center">
-            <TouchableOpacity
-              onPress={handleToggleCamera}
-              className={`w-14 h-14 rounded-full items-center justify-center shadow-sm border border-slate-200 ${
-                isCameraOn ? "bg-white" : "bg-slate-200"
-              }`}
-            >
-              <Feather
-                name={isCameraOn ? "video" : "video-off"}
-                size={22}
-                color={isCameraOn ? "#1E293B" : "#64748B"}
+        {/* 4. CENTRAL LIVE MICROPHONE CONTROL */}
+        <View className="items-center justify-center px-6 py-5">
+          <View className="items-center justify-center relative my-2" style={{ width: 120, height: 120 }}>
+            {/* Glowing ripple ring when mic is live */}
+            {isMicActive ? (
+              <View
+                style={styles.holdingGlow}
+                className="absolute w-28 h-28 rounded-full bg-violet-400/25"
               />
-            </TouchableOpacity>
-            <Text className="text-caption font-poppins-semibold text-neutral-text-secondary mt-1.5">
-              {isCameraOn ? "Camera On" : "Audio Only"}
-            </Text>
-          </View>
+            ) : null}
 
-          {/* Mic Button (Real Stream Audio Mute/Unmute) */}
-          <View className="items-center">
+            {/* Central Live Mic Button */}
             <TouchableOpacity
+              activeOpacity={0.85}
               onPress={handleToggleMic}
               disabled={streamState === "connecting" || streamState === "error"}
-              className={`w-16 h-16 rounded-full items-center justify-center shadow-md border ${
-                isMicActive
-                  ? "bg-violet-600 border-violet-500"
-                  : "bg-white border-slate-200"
-              } ${
-                streamState === "connecting" || streamState === "error"
-                  ? "opacity-50"
-                  : "opacity-100"
-              }`}
+              style={[
+                styles.pushToTalkButton,
+                isMicActive ? styles.pushToTalkActive : styles.pushToTalkIdle,
+              ]}
             >
               <Ionicons
                 name={isMicActive ? "mic" : "mic-off"}
-                size={26}
-                color={isMicActive ? "#FFFFFF" : "#EF4444"}
+                size={38}
+                color="#FFFFFF"
               />
             </TouchableOpacity>
+          </View>
+
+          {/* Helper instructions */}
+          <View className="items-center mt-2">
             <Text
-              className={`text-caption font-poppins-semibold mt-1.5 ${
-                isMicActive ? "text-primary-purple" : "text-red-500"
+              className={`text-body-medium font-poppins-bold ${
+                isMicActive ? "text-primary-purple" : "text-neutral-text-primary"
               }`}
             >
-              {isMicActive ? "Mic Active" : "Unmute"}
+              {isMicActive ? "Mic is Live • Speak Anytime" : "Mic Muted • Tap to Unmute"}
             </Text>
-          </View>
-
-          {/* Subtitles Button */}
-          <View className="items-center">
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
-                  () => {}
-                );
-                setShowSubtitles(!showSubtitles);
-              }}
-              className={`w-14 h-14 rounded-full items-center justify-center shadow-sm border border-slate-200 ${
-                showSubtitles ? "bg-white" : "bg-slate-200"
-              }`}
-            >
-              <Feather
-                name="message-square"
-                size={22}
-                color={showSubtitles ? "#1E293B" : "#64748B"}
-              />
-            </TouchableOpacity>
-            <Text className="text-caption font-poppins-semibold text-neutral-text-secondary mt-1.5">
-              Subtitles
-            </Text>
-          </View>
-
-          {/* End Call Button */}
-          <View className="items-center">
-            <TouchableOpacity
-              onPress={handleEndCall}
-              className="w-14 h-14 rounded-full bg-red-500 items-center justify-center shadow-md active:bg-red-600"
-            >
-              <Feather name="phone-off" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <Text className="text-caption font-poppins-semibold text-red-500 mt-1.5">
-              End Call
+            <Text className="text-caption font-poppins-regular text-neutral-text-secondary mt-0.5 text-center">
+              {isMicActive
+                ? "Say 'Konnichiwa' — the AI teacher will automatically reply"
+                : "Tap the purple button whenever you are ready to talk"}
             </Text>
           </View>
         </View>
@@ -977,5 +894,41 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 16,
+  },
+  pushToTalkButton: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#6C4EF5",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  pushToTalkIdle: {
+    backgroundColor: "#6C4EF5",
+    borderWidth: 4,
+    borderColor: "#8B5CF6",
+  },
+  pushToTalkActive: {
+    backgroundColor: "#7C3AED",
+    borderWidth: 4,
+    borderColor: "#C4B5FD",
+    transform: [{ scale: 1.06 }],
+  },
+  rippleRing: {
+    position: "absolute",
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "#8B5CF6",
+  },
+  holdingGlow: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
 });

@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from vision_agents.core import Agent, AgentLauncher, Runner, User
+from vision_agents.core.instructions import Instructions
 from vision_agents.plugins import getstream, openai, gemini
 
 # Load environment variables from local .env or parent directory .env
@@ -13,35 +14,30 @@ if env_path.exists():
 elif parent_env_path.exists():
     load_dotenv(dotenv_path=parent_env_path)
 
-TEACHER_INSTRUCTIONS = """You are a friendly, engaging, and patient AI Language Teacher in a playful language-learning mobile app.
+TEACHER_INSTRUCTIONS = """You are a warm, energetic, and encouraging AI Language Teacher in a playful language-learning mobile app.
 
 Core Persona & Rules:
-1. Instructional Language: You always speak English as your base language and teach the target language (such as Spanish, French, German, Japanese, Italian, etc.) through English.
-2. Voice-First Conversational Style: You are speaking in a real-time voice call. Keep your turns concise, natural, and friendly (1 to 3 short sentences per turn).
-3. Do not use special characters, emojis, asterisks, bullet points, markdown formatting, or symbols that sound unnatural when read aloud.
-4. Interactive Teaching: Teach vocabulary, pronunciation, grammar, and conversational phrases step-by-step. Ask the user to repeat words, translate short phrases, or roleplay everyday scenarios.
-5. Encouragement & Feedback: Celebrate the learner's progress with positive affirmations. Gently correct pronunciation or grammar mistakes by offering the correct phrasing and asking them to try again.
-6. Adaptability: If the user indicates a specific language, level, or lesson topic, tailor the lesson immediately to their choice. If unspecified, greet them warmly in English and ask what language or topic they would like to practice today.
+1. Warm & Human Tone: Speak with vibrant, genuine human energy. Sound enthusiastic, friendly, and supportive, never robotic, stiff, or monotone. Use natural conversational English with frequent contractions (such as "let's", "I'm", "you're", "that's", "don't").
+2. Conversational Brevity: Keep every response strictly to 1 or 2 short, natural conversational sentences. Never lecture or give long explanations. Leave plenty of room for the student to speak.
+3. Strict Lesson & Language Scope: Act as a dedicated teacher for the currently selected language and lesson only. Stay strictly within that lesson's goals, vocabulary, phrases, and context. Do not teach unrelated topics, wander into trivia, or switch to other languages.
+4. Instructional Base: Mostly speak English as your instructional language. When introducing target-language words or phrases, speak them slowly and clearly, immediately followed by their English translation.
+5. Interactive Teaching Loop:
+   - Introduce target words or phrases one step at a time.
+   - Ask the student to repeat the word, translate a short phrase, or respond to a simple prompt.
+   - Listen carefully to the student's spoken response and adapt your next explanation directly to what they said.
+   - Celebrate progress with energetic, warm praise ("Spot on!", "Love that pronunciation!", "You nailed it!").
+   - If they make a mistake or hesitate, offer warm, gentle encouragement, model the correct target word clearly, and ask them to try again.
+6. Clean Spoken Audio: Never use markdown formatting, bullet points, asterisks, emojis, or special symbols that sound unnatural when spoken aloud.
 """
 
 
 async def create_agent(**kwargs) -> Agent:
     """Factory function to instantiate the AI Language Teacher Agent."""
     gemini_key = os.getenv("GEMINI_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
 
-    if gemini_key:
-        llm = gemini.Realtime(
-            api_key=gemini_key,
-            **({"model": os.getenv("GEMINI_MODEL")} if os.getenv("GEMINI_MODEL") else {})
-        )
-    else:
-        llm = openai.Realtime(
-            api_key=openai_key,
-            model=os.getenv("OPENAI_REALTIME_MODEL", "gpt-realtime-2"),
-            voice=os.getenv("OPENAI_REALTIME_VOICE", "marin"),
-            send_video=False,
-        )
+    llm = gemini.Realtime(
+        api_key=gemini_key,
+    )
 
     return Agent(
         edge=getstream.Edge(),
@@ -54,11 +50,62 @@ async def create_agent(**kwargs) -> Agent:
     )
 
 
+from lessons_data import get_lesson_context
+
 async def join_call(agent: Agent, call_type: str, call_id: str) -> None:
     """Lifecycle handler for joining and finishing a call."""
     call = await agent.create_call(call_type=call_type, call_id=call_id)
+
+    # Deterministically resolve lesson metadata from call_id
+    lesson_ctx = get_lesson_context(call_id)
+    language_name = lesson_ctx.get("languageName", "Target Language")
+    language_code = lesson_ctx.get("languageCode", "")
+    lesson_title = lesson_ctx.get("title", "Language Lesson")
+    welcome_message = lesson_ctx.get("welcomeMessage")
+    system_prompt = lesson_ctx.get("systemPrompt")
+    vocab = ", ".join(lesson_ctx.get("vocabulary", []))
+    phrases = ", ".join(lesson_ctx.get("phrases", []))
+
+    # Enrich instructions with exact lesson context
+    context_addon = f"""
+Current Lesson Details:
+- Target Language: {language_name} ({language_code})
+- Lesson Title: {lesson_title}
+"""
+    if system_prompt:
+        context_addon += f"- Lesson Objectives & Teacher Persona:\n{system_prompt}\n"
+    if vocab:
+        context_addon += f"- Key Vocabulary:\n{vocab}\n"
+    if phrases:
+        context_addon += f"- Key Phrases:\n{phrases}\n"
+
+    agent.instructions = Instructions(input_text=f"{TEACHER_INSTRUCTIONS}\n{context_addon}")
+
     async with agent.join(call):
-        await agent.finish()
+        # Kick off the lesson warmly with the exact lesson greeting
+        try:
+            if welcome_message:
+                prompt = (
+                    f"Start the lesson warmly and enthusiastically! Speak this opening message clearly in 1 or 2 conversational sentences: \"{welcome_message}\""
+                )
+            else:
+                prompt = (
+                    f"Start the {language_name} lesson on '{lesson_title}' warmly and enthusiastically! Greet the student in English, introduce the lesson focus, and invite them to try the first target word or phrase. Keep it to 1 or 2 short, natural conversational sentences."
+                )
+            await agent.simple_response(prompt, interrupt=False)
+        except Exception as e:
+            print(f"[Agent Error in simple_response]: {e}")
+            import traceback
+            traceback.print_exc()
+
+        # Keep agent alive in the call to listen and converse with the student
+        try:
+            if hasattr(agent, "_call_ended_event"):
+                await agent._call_ended_event.wait()
+            else:
+                await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            pass
 
 
 def main() -> None:
