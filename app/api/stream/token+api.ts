@@ -34,8 +34,8 @@ export async function POST(request: Request) {
       },
     ]);
 
-    // Generate ~4-hour user token
-    const validitySeconds = 4 * 60 * 60;
+    // Generate 30-day user token for seamless development sessions
+    const validitySeconds = 30 * 24 * 60 * 60;
     const token = serverClient.generateUserToken({
       user_id: userId,
       validity_in_seconds: validitySeconds,

@@ -11,6 +11,10 @@ export async function POST(request: Request) {
       lessonTitle,
       languageCode,
       languageName,
+      aiTeacherPrompt,
+      vocabulary,
+      phrases,
+      goals,
     } = body;
 
     if (!callId || !userId) {
@@ -33,7 +37,7 @@ export async function POST(request: Request) {
     const serverClient = new StreamClient(apiKey, apiSecret);
     const call = serverClient.video.call(callType, callId);
 
-    // Create/reserve the call on Stream with custom lesson metadata
+    // Create/reserve the call on Stream with rich custom lesson metadata
     await call.getOrCreate({
       data: {
         created_by_id: userId,
@@ -43,15 +47,39 @@ export async function POST(request: Request) {
           lessonTitle: lessonTitle || "",
           languageCode: languageCode || "",
           languageName: languageName || "",
+          welcomeMessage: aiTeacherPrompt?.welcomeMessage || "",
+          systemPrompt: aiTeacherPrompt?.systemPrompt || "",
+          suggestedTopics: JSON.stringify(aiTeacherPrompt?.suggestedTopics || []),
+          vocabulary: JSON.stringify(vocabulary || aiTeacherPrompt?.keyVocabulary || []),
+          phrases: JSON.stringify(phrases || aiTeacherPrompt?.keyPhrases || []),
+          goals: JSON.stringify(goals || []),
           mode: "audio_lesson",
         },
       },
     });
 
+    // Notify Vision Agent server to join this call
+    let agentSessionId: string | null = null;
+    const visionAgentUrl = process.env.VISION_AGENT_URL || "http://127.0.0.1:8000";
+    try {
+      const agentRes = await fetch(`${visionAgentUrl}/calls/${encodeURIComponent(callId)}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ call_type: callType }),
+      });
+      if (agentRes.ok) {
+        const agentData = await agentRes.json().catch(() => ({}));
+        agentSessionId = agentData?.session_id || agentData?.id || null;
+      }
+    } catch (agentErr) {
+      console.warn("[Stream Call API] Vision Agent server not reachable:", agentErr);
+    }
+
     return Response.json({
       success: true,
       callId,
       callType,
+      agentSessionId,
       custom: {
         lessonId,
         lessonTitle,
@@ -65,5 +93,25 @@ export async function POST(request: Request) {
       { error: error?.message || "Failed to create Stream call session" },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const callId = url.searchParams.get("callId");
+    const sessionId = url.searchParams.get("sessionId");
+
+    if (callId && sessionId) {
+      const visionAgentUrl = process.env.VISION_AGENT_URL || "http://127.0.0.1:8000";
+      await fetch(
+        `${visionAgentUrl}/calls/${encodeURIComponent(callId)}/sessions/${encodeURIComponent(sessionId)}`,
+        { method: "DELETE" }
+      ).catch(() => {});
+    }
+
+    return Response.json({ success: true });
+  } catch (error: any) {
+    return Response.json({ error: error?.message || "Failed to close session" }, { status: 500 });
   }
 }

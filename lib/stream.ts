@@ -30,8 +30,10 @@ export function getApiBaseUrl(): string {
     (Constants as any)?.manifest?.debuggerHost;
 
   if (hostUri) {
-    const ip = hostUri.split(":")[0];
-    return `http://${ip}:8081`;
+    if (hostUri.includes(":")) {
+      return `http://${hostUri}`;
+    }
+    return `http://${hostUri}:8081`;
   }
 
   return "http://localhost:8081";
@@ -67,9 +69,6 @@ export async function fetchStreamToken(user: AppStreamUser): Promise<string> {
   return data.token as string;
 }
 
-/**
- * Create or reserve a call session on the server via Expo API route.
- */
 export async function createStreamCallSession(params: {
   callId: string;
   callType?: string;
@@ -78,7 +77,11 @@ export async function createStreamCallSession(params: {
   lessonTitle: string;
   languageCode: string;
   languageName: string;
-}): Promise<void> {
+  aiTeacherPrompt?: any;
+  vocabulary?: any[];
+  phrases?: any[];
+  goals?: string[];
+}): Promise<{ agentSessionId?: string | null }> {
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}/api/stream/call`;
 
@@ -96,6 +99,9 @@ export async function createStreamCallSession(params: {
       errorData.error || `Failed to create call session (Status ${response.status})`
     );
   }
+
+  const data = await response.json().catch(() => ({}));
+  return { agentSessionId: data?.agentSessionId || null };
 }
 
 /**
